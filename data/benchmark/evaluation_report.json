@@ -1,0 +1,100 @@
+{
+  "model_version": "rf-v1",
+  "timestamp": "2026-10-03T12:13:38Z",
+  "test_split": {
+    "num_runs": 241,
+    "num_failed_runs": 207,
+    "random_forest": {
+      "top_1_accuracy": 1.0,
+      "top_3_accuracy": 1.0,
+      "mean_reciprocal_rank": 1.0,
+      "precision": 0.8661,
+      "recall": 1.0,
+      "f1": 0.9283,
+      "avg_diagnosis_latency_ms": 0.65
+    },
+    "rule_baseline": {
+      "top_1_accuracy": 0.6135,
+      "top_3_accuracy": 1.0,
+      "mean_reciprocal_rank": 0.7424,
+      "precision": 0.3099,
+      "recall": 0.7874,
+      "f1": 0.4447
+    },
+    "failure_type_breakdown": {
+      "calculation_error": {
+        "total_runs": 39,
+        "top_1_accuracy": 1.0
+      },
+      "invalid_tool_output": {
+        "total_runs": 48,
+        "top_1_accuracy": 1.0
+      },
+      "wrong_parameter": {
+        "total_runs": 36,
+        "top_1_accuracy": 1.0
+      },
+      "stale_search_result": {
+        "total_runs": 44,
+        "top_1_accuracy": 1.0
+      },
+      "incorrect_filtering": {
+        "total_runs": 40,
+        "top_1_accuracy": 1.0
+      }
+    }
+  },
+  "held_out_scenario": {
+    "num_runs": 198,
+    "num_failed_runs": 169,
+    "random_forest": {
+      "top_1_accuracy": 1.0,
+      "top_3_accuracy": 1.0,
+      "mean_reciprocal_rank": 1.0,
+      "precision": 0.8711,
+      "recall": 1.0,
+      "f1": 0.9311,
+      "avg_diagnosis_latency_ms": 0.39
+    },
+    "rule_baseline": {
+      "top_1_accuracy": 0.6095,
+      "top_3_accuracy": 1.0,
+      "mean_reciprocal_rank": 0.7396,
+      "precision": 0.3063,
+      "recall": 0.7811,
+      "f1": 0.44
+    },
+    "failure_type_breakdown": {
+      "calculation_error": {
+        "total_runs": 28,
+        "top_1_accuracy": 1.0
+      },
+      "invalid_tool_output": {
+        "total_runs": 40,
+        "top_1_accuracy": 1.0
+      },
+      "wrong_parameter": {
+        "total_runs": 29,
+        "top_1_accuracy": 1.0
+      },
+      "stale_search_result": {
+        "total_runs": 37,
+        "top_1_accuracy": 1.0
+      },
+      "incorrect_filtering": {
+        "total_runs": 35,
+        "top_1_accuracy": 1.0
+      }
+    }
+  },
+  "summary": {
+    "rf_top_1": 1.0,
+    "rf_top_3": 1.0,
+    "rf_mrr": 1.0,
+    "rf_f1": 0.9283,
+    "baseline_top_1": 0.6135,
+    "baseline_mrr": 0.7424,
+    "held_out_top_1": 1.0,
+    "diagnosis_latency_ms": 0.65
+  }
+}
