@@ -25,9 +25,10 @@ def get_database_url() -> str:
     """Normalize and return the database URL from config.
     
     Handles postgres:// -> postgresql+psycopg:// conversion for SQLAlchemy 2.0.
+    Falls back to local SQLite if unconfigured or contains placeholder values.
     """
     raw_url = getattr(config, "DB_URL", "") or os.getenv("SUPABASE_DB_URL", "")
-    if not raw_url:
+    if not raw_url or "YourPasswordHere" in raw_url or "<" in raw_url:
         return "sqlite:///./blackbox_local.db"
 
     url = raw_url.strip()
@@ -85,20 +86,32 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db(target_engine=None) -> None:
-    """Initialize all tables defined in models.py."""
+    """Initialize all tables defined in models.py with automatic SQLite fallback."""
+    global engine, SessionLocal
     active_engine = target_engine or engine
     
-    # If postgres, try creating the uuid extension if possible
-    if active_engine.dialect.name == "postgresql":
-        try:
-            with active_engine.connect() as conn:
-                conn.execute(text('create extension if not exists "uuid-ossp";'))
-                conn.commit()
-        except Exception as e:
-            logger.debug(f"uuid-ossp extension check: {e}")
-
-    # Import models so all tables are registered with Base metadata
     from . import models  # noqa: F401
 
-    Base.metadata.create_all(bind=active_engine)
-    logger.info("Database schema initialized.")
+    try:
+        if active_engine.dialect.name == "postgresql":
+            try:
+                with active_engine.connect() as conn:
+                    conn.execute(text('create extension if not exists "uuid-ossp";'))
+                    conn.commit()
+            except Exception as e:
+                logger.debug(f"uuid-ossp extension check: {e}")
+
+        Base.metadata.create_all(bind=active_engine)
+        logger.info(f"Database schema initialized successfully using {active_engine.dialect.name}.")
+    except Exception as e:
+        if active_engine.dialect.name == "postgresql":
+            logger.warning(
+                f"⚠️ PostgreSQL connection failed: {e}. Falling back gracefully to local SQLite database."
+            )
+            fallback_engine = create_db_engine("sqlite:///./blackbox_local.db")
+            engine = fallback_engine
+            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=fallback_engine)
+            Base.metadata.create_all(bind=fallback_engine)
+            logger.info("Local SQLite database schema initialized as fallback.")
+        else:
+            raise
