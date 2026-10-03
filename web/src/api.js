@@ -126,3 +126,14 @@ export function formatBackendRun(runDetail, diagDetail) {
   }
 }
 
+export async function importTraceApi(payload) {
+  const res = await fetch(`${BASE_URL}/traces/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+

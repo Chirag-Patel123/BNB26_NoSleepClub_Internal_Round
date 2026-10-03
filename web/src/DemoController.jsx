@@ -2,24 +2,39 @@ import { useState } from 'react'
 import { Icon } from './ui.jsx'
 
 export const DEMO_SCENARIOS = {
-  calculation_error: {
-    id: 'calculation_error',
-    name: '01 // Calculation Error (Negative Price)',
-    badge: 'STATE CORRUPTION',
-    originStep: 6,
-    originTool: 'compute_price',
+  wrong_parameter: {
+    id: 'wrong_parameter',
+    name: '01 // Route Hallucination (DEL → BLR booked DEL → BOM)',
+    badge: 'ROUTE INVARIANT VIOLATION',
+    originStep: 3,
+    originTool: 'search_flights',
+    crashStep: 8,
+    crashTool: 'book_flight / summarize',
+    originExplanation: 'Step 3 (search_flights) mutated destination="BOM" while user explicitly requested "BLR" (Delhi → Bengaluru). The agent selected and prepared booking for Mumbai.',
+    crashExplanation: 'Pre-booking guardrail blocked execution: booking payload destination (BOM) != requested destination (BLR).',
+    mlInsight: 'Random Forest identified parameter deviation between journey plan and search query, ranking Step 3 as the #1 causal root with 94% confidence.',
+    fixPayload: '{"query": {"from": "DEL", "to": "BLR", "date": "2026-10-04"}}',
+    fixCheckpoint: 2,
+    fixDescription: 'Branch at Checkpoint 2 and restore the correct destination parameter "BLR".'
+  },
+  incorrect_filtering: {
+    id: 'incorrect_filtering',
+    name: '02 // Filter Relaxation (Budget Overflow)',
+    badge: 'MODEL DECISION',
+    originStep: 4,
+    originTool: 'filter_by_budget',
     crashStep: 8,
     crashTool: 'summarize',
-    originExplanation: 'Step 6 (compute_price) silently produced total = -1240 INR, violating a positive price invariant.',
-    crashExplanation: 'Step 8 (summarize) failed validation when verifying final invoice pricing.',
-    mlInsight: 'Random Forest classifier detected state corruption and downstream dependency failure, ranking Step 6 as the #1 culprit with 92% confidence.',
-    fixPayload: '{"total": 5936, "base": 5300, "taxes": 636}',
-    fixCheckpoint: 5,
-    fixDescription: 'Branch at Checkpoint 5 and provide the non-negative price payload.'
+    originExplanation: 'Step 4 relaxed user budget from requested ₹20,000 to ₹30,000, allowing an unaffordable flight into selected state.',
+    crashExplanation: 'Booking finalized on an over-budget ticket, violating the user intent specification.',
+    mlInsight: 'Random Forest detected state anomaly across the journey budget invariant, ranking Step 4 with 89% confidence.',
+    fixPayload: '{"max_price": 20000, "strict": true}',
+    fixCheckpoint: 3,
+    fixDescription: 'Branch at Checkpoint 3 and enforce strict budget constraint.'
   },
   stale_search_result: {
     id: 'stale_search_result',
-    name: '02 // Stale Cache Fare (Retrieval Failure)',
+    name: '03 // Stale Cache Fare (Retrieval Failure)',
     badge: 'RETRIEVAL INVARIANT',
     originStep: 3,
     originTool: 'search_flights',
@@ -32,20 +47,20 @@ export const DEMO_SCENARIOS = {
     fixCheckpoint: 2,
     fixDescription: 'Branch at Checkpoint 2 and refresh search with live inventory.'
   },
-  incorrect_filtering: {
-    id: 'incorrect_filtering',
-    name: '03 // Filter Relaxation (Budget Overflow)',
-    badge: 'MODEL DECISION',
-    originStep: 4,
-    originTool: 'filter_by_budget',
+  calculation_error: {
+    id: 'calculation_error',
+    name: '04 // Calculation Error (Negative Price)',
+    badge: 'STATE CORRUPTION',
+    originStep: 6,
+    originTool: 'compute_price',
     crashStep: 8,
     crashTool: 'summarize',
-    originExplanation: 'Step 4 relaxed user budget from requested ₹20,000 to ₹30,000, allowing an unaffordable flight into selected state.',
-    crashExplanation: 'Booking finalized on an over-budget ticket, violating the user intent specification.',
-    mlInsight: 'Random Forest detected state anomaly across the journey budget invariant, ranking Step 4 with 89% confidence.',
-    fixPayload: '{"max_price": 20000, "strict": true}',
-    fixCheckpoint: 3,
-    fixDescription: 'Branch at Checkpoint 3 and enforce strict budget constraint.'
+    originExplanation: 'Step 6 (compute_price) silently produced total = -1240 INR, violating a positive price invariant.',
+    crashExplanation: 'Step 8 (summarize) failed validation when verifying final invoice pricing.',
+    mlInsight: 'Random Forest classifier detected state corruption and downstream dependency failure, ranking Step 6 as the #1 culprit with 92% confidence.',
+    fixPayload: '{"total": 5936, "base": 5300, "taxes": 636}',
+    fixCheckpoint: 5,
+    fixDescription: 'Branch at Checkpoint 5 and provide the non-negative price payload.'
   }
 }
 
