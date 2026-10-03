@@ -69,3 +69,31 @@ def test_resume_from_checkpoint_counterfactual():
     assert alt.run.status == "success" and alt.run.run_id != orig.run.run_id
     assert [s.step_index for s in alt.steps] == [5, 6, 7]
     assert orig.run.status == "failure"
+
+# ---- batch 2: dataset variation ----
+from agent.tools import SCENARIOS
+
+@pytest.mark.parametrize("sc", list(SCENARIOS))
+def test_all_scenarios_succeed_normally(sc):
+    for seed in range(1, 40):
+        assert run_agent(seed=seed, scenario_id=sc).run.status == "success"
+
+@pytest.mark.parametrize("sc", list(SCENARIOS))
+@pytest.mark.parametrize("ft", list(INJECTIONS))
+def test_all_failures_fail_for_all_scenarios(sc, ft):
+    tgt = int(INJECTIONS[ft][0].split("-")[1])
+    for seed in range(1, 25):
+        r = run_agent(seed=seed, scenario_id=sc, failure=inject_failure(ft, tgt, seed))
+        assert r.run.status == "failure", (sc, ft, seed)
+        assert min(s.step_index for s in r.steps if s.status == "failure") >= tgt
+
+def test_dataset_generator(tmp_path, monkeypatch):
+    import json, sys
+    from agent import generate_dataset as g
+    monkeypatch.setattr(g, "OUT", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["x", "--n", "60", "--seed", "3"])
+    g.main()
+    rows = [json.loads(l) for l in (tmp_path / "runs.jsonl").read_text().splitlines()]
+    assert len(rows) == 60
+    assert all(r["split"] == "test" for r in rows if r["run"]["scenario_id"] == "flight_tight_budget")
+    assert {r["split"] for r in rows} >= {"train", "test"}

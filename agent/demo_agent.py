@@ -33,10 +33,15 @@ DEFAULT_TASK = "Find the cheapest flight from Mumbai to Delhi on 2026-10-04 unde
 
 
 def _latency(seed: int, idx: int) -> int:
-    return 80 + random.Random(f"{seed}:lat:{idx}").randrange(0, 60)
+    r = random.Random(f"{seed}:lat:{idx}")
+    lat = 80 + r.randrange(0, 60)
+    if r.random() < 0.07:  # occasional benign timing outlier on ANY step (keeps latency from leaking the label)
+        lat += r.randrange(150, 400)
+    return lat
 
 
-def _run_step(idx: int, state: dict, task: str, seed: int, fail: Optional[FailureConfig], override):
+def _run_step(idx: int, state: dict, task: str, seed: int, fail: Optional[FailureConfig], override,
+              scenario_id: str = "flight_basic"):
     """Returns (output, new_state, error) where error is (error_type, msg, retries) or None."""
     sid = f"step-{idx}"
     hit = fail is not None and fail.target_step == sid
@@ -47,7 +52,7 @@ def _run_step(idx: int, state: dict, task: str, seed: int, fail: Optional[Failur
     if idx == 1:
         out = tools.parse_request(task); st["request"] = out
     elif idx == 2:
-        out = tools.extract_journey(task); st["journey"] = out
+        out = tools.extract_journey(task, scenario_id, seed); st["journey"] = out
     elif idx == 3:
         q = {k: st["journey"][k] for k in ("from", "to", "date")}
         if ftype == "wrong_parameter":
@@ -130,7 +135,7 @@ def run_agent(task: str = DEFAULT_TASK, seed: int = 42, failure: Optional[Failur
         if failed_at is not None:
             rec.fail_step(step, "state_corruption", f"depends on failed step-{failed_at}", {}, snap(state), lat)
             continue
-        out, new_state, err = _run_step(idx, state, task, seed, failure, override)
+        out, new_state, err = _run_step(idx, state, task, seed, failure, override, scenario_id)
         if err:
             failed_at = idx
             rec.fail_step(step, err[0], err[1], out, snap(new_state), lat, retry_count=err[2])

@@ -22,3 +22,12 @@
 - P4: UI-ready JSON = `to_json(result)`; order by step_index; graph in `result.graph`.
 
 ## Tests: `pytest -q` -> 13 passed. Suggested commit: `p1: add deterministic agent runner and trace recorder`
+
+## Batch 2 (dataset for P2)
+- `python -m agent.generate_dataset --n 600 --seed 1` -> `data/synthetic/runs.jsonl` (1 RunResult JSON per line, with `split`) + `benchmark_cases.json` (matches `benchmark_cases` table columns; `notes` = run_id).
+- Scenarios: flight_basic, flight_group, flight_tight_budget. `flight_tight_budget` is HELD OUT entirely (always test) for known-vs-held-out evaluation.
+- Other splits by whole run: 70/15/15. ~15% normal runs (no injection).
+- Seed now varies budget, prices, seats, and latency (incl. benign 7% timing outliers on any step so latency alone doesn't reveal the label).
+- Label for P2: `ground_truth.target_step_id` (sidecar, not a step field). Normal runs have target null.
+- Tests: `pytest -q` -> 32 passed (all 3 scenarios x 5 failures x many seeds fail correctly, never crash earlier than origin).
+- Suggested commit: `p1: add scenario variation and batch dataset generator`

@@ -7,8 +7,16 @@ def _rng(seed: int, salt: str) -> random.Random:
 def parse_request(task: str) -> dict:
     return {"intent": "find_flight", "raw": task}
 
-def extract_journey(task: str) -> dict:
-    return {"from": "BOM", "to": "DEL", "date": "2026-10-04", "max_price": 6000, "passengers": 1}
+SCENARIOS = {  # scenario_id -> (base max_price, passengers)
+    "flight_basic": (6000, 1),
+    "flight_group": (7500, 3),
+    "flight_tight_budget": (5500, 1),
+}
+
+def extract_journey(task: str, scenario_id: str = "flight_basic", seed: int = 42) -> dict:
+    base, pax = SCENARIOS.get(scenario_id, SCENARIOS["flight_basic"])
+    jitter = _rng(seed, "budget").randrange(0, 5) * 100
+    return {"from": "BOM", "to": "DEL", "date": "2026-10-04", "max_price": base + jitter, "passengers": pax}
 
 def search_flights(query: dict, seed: int) -> dict:
     base = 4800 + _rng(seed, "search").randrange(0, 4) * 100
