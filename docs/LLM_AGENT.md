@@ -19,20 +19,14 @@ faulty tool / faulty parameters ──► LLM agent loop ──► logs/llm_agen
 python -m agent.llm_pipeline generate --n 15 --agent-client scripted
 python -m agent.llm_pipeline evaluate --analysis-client heuristic
 
-# real Claude as the agent AND as the analyst (needs a key; never commit it)
-set ANTHROPIC_API_KEY=your-key-here          (Windows cmd)   |   export ANTHROPIC_API_KEY=...   (bash)
-set BLACKBOX_LLM_MODEL=claude-sonnet-5-5     (optional override)
-python -m agent.llm_pipeline generate --n 20 --agent-client anthropic --log-dir logs/claude_agent
-python -m agent.llm_pipeline evaluate --log-dir logs/claude_agent --analysis-client anthropic
-
-# real Groq (Llama-3.3-70b-versatile, ultra-fast & free tier available)
+# real Groq (Llama-3.3-70b-versatile, ultra-fast & pre-trained model)
 set GROQ_API_KEY=your-key-here               (Windows cmd)   |   export GROQ_API_KEY=...        (bash)
 set GROQ_MODEL=llama-3.3-70b-versatile       (optional override)
 python -m agent.llm_pipeline generate --n 20 --agent-client groq --log-dir logs/groq_agent
 python -m agent.llm_pipeline evaluate --log-dir logs/groq_agent --analysis-client groq
 ```
 
-Add `ANTHROPIC_API_KEY=`, `BLACKBOX_LLM_MODEL=`, `GROQ_API_KEY=`, and `GROQ_MODEL=` (names only) to `.env.example`.
+Add `GROQ_API_KEY=` and `GROQ_MODEL=` (names only) to `.env.example`.
 
 ## The agent
 A tool-using loop: the model chooses tools and arguments. Tools: `search_flights`, `check_availability`,
@@ -75,7 +69,7 @@ raw transcript keeps what the model requested.
 - `HeuristicBaseline` is a rules diagnoser. It is NOT an LLM. It was written with knowledge of this agent's error
   types, so its near-perfect score on scripted logs is expected and does not show that an LLM will do well.
   Use it only as a baseline and to test the pipeline.
-- Real conclusions need `--agent-client anthropic` and `--analysis-client anthropic` runs on your machine.
+- Real conclusions need `--agent-client groq` and `--analysis-client groq` runs on your machine.
   Real model logs will be messier (different retries, different reasoning), which is the point.
 
 ## Limits

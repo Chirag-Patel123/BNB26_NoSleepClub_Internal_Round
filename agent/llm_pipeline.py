@@ -2,7 +2,7 @@
 
   python -m agent.llm_pipeline generate --n 15 --agent-client scripted
   python -m agent.llm_pipeline evaluate --analysis-client heuristic
-  python -m agent.llm_pipeline evaluate --agent-client anthropic --analysis-client anthropic   (needs ANTHROPIC_API_KEY)
+  python -m agent.llm_pipeline evaluate --agent-client groq --analysis-client groq   (needs GROQ_API_KEY)
 """
 from __future__ import annotations
 import argparse, json, pathlib, random
@@ -10,7 +10,7 @@ from typing import Any
 from tracing.render import render_trace
 from . import llm_tools as T
 from .llm_agent import LLMFault, run_llm_agent
-from .llm_client import AnthropicClient, GroqClient, HeuristicBaseline, ScriptedAgentClient
+from .llm_client import GroqClient, HeuristicBaseline, ScriptedAgentClient
 from .tools import SCENARIOS
 
 GEN_SYSTEM = (
@@ -27,15 +27,11 @@ DIAG_SYSTEM = (
     "\"reasoning\": \"<1-2 sentences>\"}. Quotes must be copied verbatim from the log.")
 
 def make_agent_client(name: str):
-    if name == "anthropic":
-        return AnthropicClient()
     if name == "groq":
         return GroqClient()
     return ScriptedAgentClient()
 
 def make_analysis_client(name: str):
-    if name == "anthropic":
-        return AnthropicClient()
     if name == "groq":
         return GroqClient()
     return HeuristicBaseline()
@@ -122,8 +118,8 @@ def main(argv=None):
     ap.add_argument("--n", type=int, default=15)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--log-dir", default="logs/llm_agent")
-    ap.add_argument("--agent-client", default="scripted", choices=["scripted", "anthropic", "groq"])
-    ap.add_argument("--analysis-client", default="heuristic", choices=["heuristic", "anthropic", "groq"])
+    ap.add_argument("--agent-client", default="scripted", choices=["scripted", "groq"])
+    ap.add_argument("--analysis-client", default="heuristic", choices=["heuristic", "groq"])
     a = ap.parse_args(argv)
     if a.cmd == "generate":
         runs = generate_logs(a.n, a.seed, make_agent_client(a.agent_client), a.log_dir)

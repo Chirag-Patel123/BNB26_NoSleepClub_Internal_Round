@@ -18,13 +18,6 @@ from . import tools as base
 from .demo_agent import _latency, to_json
 from .state import snap
 
-SYSTEM_PROMPT = (
-    "You are a flight-booking assistant using mock tools (no real booking). Find the cheapest flight within the "
-    "user's budget, confirm availability, compute the total price, then prepare the booking. If a tool returns an "
-    "error you may retry with corrected arguments, but stop after at most two retries and explain the problem. "
-    "Finish with a one-sentence summary."
-)
-
 class LLMFault(BaseModel):
     kind: str            # faulty_tool | faulty_parameter
     tool: str
@@ -46,7 +39,8 @@ def make_task(scenario_id: str, seed: int) -> str:
             f"for {j['passengers']} passenger(s). Prepare the booking when done.")
 
 def run_llm_agent(client, scenario_id: str = "flight_basic", seed: int = 42, fault: Optional[LLMFault] = None,
-                  log_dir: Optional[str] = "logs", max_steps: int = 12, max_turns: int = 10) -> LLMRun:
+                  log_dir: Optional[str] = "logs", max_steps: int = 12, max_turns: int = 10,
+                  system_prompt: Optional[str] = None) -> LLMRun:
     if fault and (fault.kind, fault.tool) not in T.ALL_FAULTS:
         raise ValueError(f"unsupported fault {fault.label()}; allowed: {T.ALL_FAULTS}")
     task = make_task(scenario_id, seed)
@@ -62,7 +56,7 @@ def run_llm_agent(client, scenario_id: str = "flight_basic", seed: int = 42, fau
         return {"search_results": env.get("search", []), "booking": env.get("booking")}
 
     for _turn in range(max_turns):
-        turn = client.step(SYSTEM_PROMPT, messages, T.TOOL_SPECS)
+        turn = client.step(system_prompt or "", messages, T.TOOL_SPECS)
         messages.append({"role": "assistant", "content": turn["content"]})
         if not turn["tool_calls"]:
             final_text = turn["text"]

@@ -1,52 +1,15 @@
-"""LLM clients (P1): real Claude via HTTPS, plus an offline scripted agent policy.
+"""LLM clients (P1): pre-trained Groq API via HTTPS, plus an offline scripted agent policy.
 
-AnthropicClient   - real model; needs ANTHROPIC_API_KEY. Env: BLACKBOX_LLM_MODEL (default claude-sonnet-5-5)
+GroqClient          - real pre-trained model on Groq (Llama-3.3-70b-versatile); needs GROQ_API_KEY.
 ScriptedAgentClient - deterministic offline stand-in that behaves like a tool-using model (NOT an LLM).
-HeuristicBaseline - offline rules diagnoser used as a baseline / for tests (NOT an LLM).
+HeuristicBaseline   - offline rules diagnoser used as a baseline / for tests (NOT an LLM).
 """
 from __future__ import annotations
 import json, os, re, time
 from typing import Any, Optional
 import httpx
 
-DEFAULT_MODEL = "claude-sonnet-5-5"
-
-class AnthropicClient:
-    name = "anthropic"
-
-    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
-                 transport: Optional[httpx.BaseTransport] = None, timeout: float = 90.0):
-        key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        if not key:
-            raise RuntimeError("ANTHROPIC_API_KEY is not set (put it in your local .env / environment, never in git)")
-        self.model = model or os.getenv("BLACKBOX_LLM_MODEL", DEFAULT_MODEL)
-        self._http = httpx.Client(base_url="https://api.anthropic.com", timeout=timeout, transport=transport,
-                                  headers={"x-api-key": key, "anthropic-version": "2023-06-01",
-                                           "content-type": "application/json"})
-
-    def _post(self, payload: dict) -> dict:
-        r = self._http.post("/v1/messages", json={**payload, "temperature": 0})
-        if r.status_code == 400 and "temperature" in r.text:  # some models reject it
-            r = self._http.post("/v1/messages", json=payload)
-        r.raise_for_status()
-        return r.json()
-
-    def step(self, system: str, messages: list, tools: list) -> dict:
-        t0 = time.time()
-        data = self._post({"model": self.model, "max_tokens": 1024, "system": system,
-                           "messages": messages, "tools": tools})
-        blocks = data["content"]
-        u = data.get("usage", {})
-        return {"text": "".join(b.get("text", "") for b in blocks if b["type"] == "text"),
-                "tool_calls": [{"id": b["id"], "name": b["name"], "input": b["input"]}
-                               for b in blocks if b["type"] == "tool_use"],
-                "content": blocks, "llm_ms": int((time.time() - t0) * 1000),
-                "usage": {"input_tokens": u.get("input_tokens", 0), "output_tokens": u.get("output_tokens", 0)}}
-
-    def complete(self, system: str, user: str, max_tokens: int = 1500) -> str:
-        data = self._post({"model": self.model, "max_tokens": max_tokens, "system": system,
-                           "messages": [{"role": "user", "content": user}]})
-        return "".join(b.get("text", "") for b in data["content"] if b["type"] == "text")
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
 
 class GroqClient:
