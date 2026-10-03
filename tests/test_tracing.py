@@ -97,3 +97,69 @@ def test_dataset_generator(tmp_path, monkeypatch):
     assert len(rows) == 60
     assert all(r["split"] == "test" for r in rows if r["run"]["scenario_id"] == "flight_tight_budget")
     assert {r["split"] for r in rows} >= {"train", "test"}
+
+def test_service_start_run():
+    from agent.service import start_run
+    d = start_run("flight_group", 5, "invalid_tool_output", "step-5")
+    assert d["run"]["status"] == "failure" and d["ground_truth"]["target_step_id"] == "step-5"
+    with pytest.raises(ValueError):
+        start_run(failure_type="nope")
+
+# ---- audit fixes ----
+def _ck(res, idx):
+    return next(c for c in res.checkpoints if c.step_index == idx)
+
+def test_spec_style_replay_default_args_override_wins():
+    orig = run_agent(failure=inject_failure("invalid_tool_output", 5))
+    alt = run_agent(resume_from=_ck(orig, 4), parent_run_id=orig.run.run_id,
+                    override={"step_id": "step-5", "value": {"available": True}})
+    assert alt.run.status == "success" and alt.run.parent_run_id == orig.run.run_id
+
+def test_override_parameter_step3():
+    o = run_agent(failure=inject_failure("wrong_parameter", 3))
+    a = run_agent(resume_from=_ck(o, 2), override={"step_id": "step-3", "value": {"to": "DEL"}})
+    assert o.run.status == "failure" and a.run.status == "success"
+
+def test_override_tool_result_step3_fixes_stale():
+    o = run_agent(failure=inject_failure("stale_search_result", 3))
+    good = run_agent(seed=42).steps[2].output_summary["results"]
+    a = run_agent(resume_from=_ck(o, 2), override={"step_id": "step-3", "value": {"results": good}})
+    assert a.run.status == "success"
+
+def test_override_branch_choice_step4():
+    n = run_agent()
+    a = run_agent(resume_from=_ck(n, 3), override={"step_id": "step-4", "value": {"selected_flight_id": "F202"}})
+    assert a.run.status == "success" and a.steps[-1].output_summary["flight_id"] == "F202"
+
+def test_resume_completed_steps_include_reused():
+    o = run_agent(failure=inject_failure("invalid_tool_output", 5))
+    a = run_agent(resume_from=_ck(o, 4), override={"step_id": "step-5", "value": {"available": True}})
+    assert a.checkpoints[0].step_id == "step-5"
+    assert a.checkpoints[0].completed_steps == ["step-1", "step-2", "step-3", "step-4", "step-5"]
+
+def test_no_label_marker_in_trace():
+    r = run_agent(failure=inject_failure("stale_search_result", 3))
+    d = json.dumps([s.model_dump(mode="json") for s in r.steps])  # step data is what ML consumes
+    assert "stale" not in d and "wrong_parameter" not in d
+
+def test_vocab_enforced_on_assignment():
+    s = run_agent().steps[0]
+    with pytest.raises(Exception):
+        s.error_type = "bogus"
+    with pytest.raises(Exception):
+        s.status = "weird"
+
+def test_determinism_across_processes():
+    import subprocess, sys, os
+    code = ("import json;from agent.demo_agent import run_agent,to_json;from agent.failure_injection import inject_failure;"
+            "d=to_json(run_agent(seed=9,scenario_id='flight_group',failure=inject_failure('stale_search_result',3,9)));"
+            "[ [s.pop(k) for k in ('run_id','created_at','checkpoint_id')] for s in d['steps']];print(json.dumps(d['steps'],sort_keys=True))")
+    outs = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+            env={**os.environ, "PYTHONHASHSEED": h}).stdout for h in ("0", "123")}
+    assert len(outs) == 1 and list(outs)[0].strip()
+
+def test_original_unchanged_by_replay():
+    o = run_agent(failure=inject_failure("invalid_tool_output", 5))
+    before = o.model_dump_json()
+    run_agent(resume_from=_ck(o, 4), override={"step_id": "step-5", "value": {"available": True}})
+    assert o.model_dump_json() == before

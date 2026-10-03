@@ -10,6 +10,7 @@ class TraceRecorder:
         self.run: Optional[Run] = None
         self.steps: list[Step] = []
         self.checkpoints: list[Checkpoint] = []
+        self.prior_completed: list[str] = []  # steps reused from a parent run (resume)
 
     def start_run(self, task: str, scenario_id: str, parent_run_id: Optional[str] = None,
                   run_id: Optional[str] = None, **versions) -> Run:
@@ -45,7 +46,7 @@ class TraceRecorder:
     def add_checkpoint(self, step: Step, state: dict, context: dict) -> Checkpoint:
         ck = Checkpoint(checkpoint_id=str(uuid.uuid4()), run_id=self.run.run_id, step_id=step.step_id,
                         step_index=step.step_index, state_snapshot=state, context_snapshot=context,
-                        completed_steps=[s.step_id for s in self.steps if s.status == "success"])
+                        completed_steps=self.prior_completed + [s.step_id for s in self.steps if s.status == "success"])
         step.checkpoint_id = ck.checkpoint_id
         if self.run.root_checkpoint_id is None:
             self.run.root_checkpoint_id = ck.checkpoint_id

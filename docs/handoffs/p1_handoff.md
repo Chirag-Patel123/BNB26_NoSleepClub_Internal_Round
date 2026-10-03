@@ -31,3 +31,18 @@
 - Label for P2: `ground_truth.target_step_id` (sidecar, not a step field). Normal runs have target null.
 - Tests: `pytest -q` -> 32 passed (all 3 scenarios x 5 failures x many seeds fail correctly, never crash earlier than origin).
 - Suggested commit: `p1: add scenario variation and batch dataset generator`
+
+## Batch 3 - audit fixes (IMPORTANT for P3/P4)
+- **Override now wins over an inherited injected failure.** Before, replaying from a checkpoint with default args re-injected the failure and ignored the modification. Now `override` on a step suppresses the injection for that step.
+- Override coverage (spec's 3 modification types), `override={"step_id","value"}`:
+  - tool result: step-3 `{"results":[...]}`, step-4 `{"candidates":[...]}`, step-5/6/7 merge into output (e.g. `{"available": true}`)
+  - parameter: step-2 merges into journey; step-3 `{"from"|"to"|"date": ...}` edits the search query
+  - branch/tool choice: step-4 `{"selected_flight_id": "F202"}`
+- Resumed runs: only steps AFTER the checkpoint are recorded. `completed_steps` on new checkpoints now includes reused parent steps. P3: derive common prefix from checkpoint.step_index of the parent.
+- Removed the literal `stale` marker from step output (was a label leak); stale detection now compares against the mock availability service.
+- `Step` validates status/error_type on assignment.
+- Checkpoint `context_snapshot` holds the injected failure config (needed so partial replay reproduces the same failure). P2: never read it as a feature; use steps only.
+- Known: sanitizer runs in `to_json()`; persisting `RunResult` objects directly skips it (no secrets are ever produced by the mock tools anyway).
+- Known: for incorrect_filtering, ~30% of runs crash at the origin step itself (empty candidate list, group scenario). Other failure types always crash after the origin except invalid_tool_output (same step).
+- Dataset is very clean/deterministic, so expect near-perfect RandomForest scores; report honestly and show the held-out `flight_tight_budget` split.
+- Tests: `pytest -q` -> 42 passed.

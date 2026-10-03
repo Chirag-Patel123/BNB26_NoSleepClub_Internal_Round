@@ -42,19 +42,29 @@ def _latency(seed: int, idx: int) -> int:
 
 def _run_step(idx: int, state: dict, task: str, seed: int, fail: Optional[FailureConfig], override,
               scenario_id: str = "flight_basic"):
-    """Returns (output, new_state, error) where error is (error_type, msg, retries) or None."""
+    """Returns (output, new_state, error) where error is (error_type, msg, retries) or None.
+
+    `override` = {"step_id": "step-N", "value": {...}} is a counterfactual modification and WINS over any
+    injected failure on that step. Supported (spec's 3 modification types):
+      tool result : step-3 {"results": [...]}, step-4 {"candidates": [...]}, step-5/6/7 merge into output
+      parameter   : step-2 merges into journey, step-3 {"from"|"to"|"date": ...} edits the search query
+      branch choice: step-4 {"selected_flight_id": "F202"}
+    """
     sid = f"step-{idx}"
-    hit = fail is not None and fail.target_step == sid
+    ov = override["value"] if override and override.get("step_id") == sid else None
+    hit = fail is not None and fail.target_step == sid and ov is None
     ftype = fail.failure_type if hit else None
     st = snap(state)
     err = None
 
     if idx == 1:
-        out = tools.parse_request(task); st["request"] = out
+        out = {**tools.parse_request(task), **(ov or {})}; st["request"] = out
     elif idx == 2:
-        out = tools.extract_journey(task, scenario_id, seed); st["journey"] = out
+        out = {**tools.extract_journey(task, scenario_id, seed), **(ov or {})}; st["journey"] = out
     elif idx == 3:
         q = {k: st["journey"][k] for k in ("from", "to", "date")}
+        if ov:
+            q.update({k: v for k, v in ov.items() if k in q})
         if ftype == "wrong_parameter":
             q["to"] = "BLR"  # bad parameter
         out = tools.search_flights(q, seed)
@@ -62,17 +72,25 @@ def _run_step(idx: int, state: dict, task: str, seed: int, fail: Optional[Failur
             out["results"] = []
         if ftype == "stale_search_result":
             for f in out["results"]:
-                f["price"] -= 1800; f["stale"] = True
+                f["price"] -= 1800  # silently stale prices; no marker left in the trace
+        if ov and "results" in ov:
+            out["results"] = ov["results"]
         st["search_results"] = out["results"]
     elif idx == 4:
         res = st["search_results"]
         cands = tools.filter_flights(res, st["journey"]["max_price"])
         if ftype == "incorrect_filtering":
             cands = [f for f in res if f["price"] > st["journey"]["max_price"]]  # inverted filter
+        if ov and "candidates" in ov:
+            cands = ov["candidates"]
+        chosen = cands[0] if cands else None
+        if ov and "selected_flight_id" in ov:
+            chosen = next((f for f in res if f["id"] == ov["selected_flight_id"]), chosen)
         out = {"candidates": cands}
-        st["candidates"] = cands
-        st["selected_flight"] = cands[0] if cands else None
-        if not cands:
+        if ov and "selected_flight_id" in ov:
+            out["selected_flight_id"] = chosen["id"] if chosen else None
+        st["candidates"], st["selected_flight"] = cands, chosen
+        if chosen is None:
             err = ("model_decision_failure", "no candidates after filtering", 0)
     elif idx == 5:
         f = st.get("selected_flight")
@@ -80,23 +98,36 @@ def _run_step(idx: int, state: dict, task: str, seed: int, fail: Optional[Failur
             out = {"available": False}; err = ("state_corruption", "no selected flight", 0)
         else:
             out = tools.validate_availability(f, seed)
-            if override and override.get("step_id") == sid:
-                out = {**out, **override["value"]}
-            if ftype == "invalid_tool_output":
+            if ov:
+                out = {**out, **ov}
+            elif ftype == "invalid_tool_output":
                 out = {"flight_id": f["id"], "available": None, "seats_left": -1}
                 err = ("tool_output_failure", "availability field inconsistent", 2)
-            elif f.get("stale") or f["price"] > st["journey"]["max_price"]:
-                out = {**out, "available": False}
-                err = ("retrieval_context_failure" if f.get("stale") else "model_decision_failure",
-                       "selected flight not actually available/valid", 1)
+            else:
+                j = st["journey"]
+                truth = {x["id"]: x for x in tools.search_flights(
+                    {"from": j["from"], "to": j["to"], "date": j["date"]}, seed)["results"]}
+                t = truth.get(f["id"])
+                if t is None or t["price"] != f["price"]:
+                    out = {**out, "available": False}
+                    err = ("retrieval_context_failure", "selected flight does not match availability service", 1)
+                elif f["price"] > j["max_price"]:
+                    out = {**out, "available": False}
+                    err = ("model_decision_failure", "selected flight exceeds budget", 1)
+            if err is None and out.get("available") is not True:
+                err = ("tool_output_failure", "flight reported unavailable", 1)
         st["availability"] = out
     elif idx == 6:
         out = tools.calculate_price(st["selected_flight"], st["journey"]["passengers"])
-        if ftype == "calculation_error":
+        if ov:
+            out = {**out, **ov}
+        elif ftype == "calculation_error":
             out = {**out, "total": -out["total"]}  # silent bad value, no crash here
         st["price"] = out
     else:  # 7
         out = tools.prepare_booking_payload(st["selected_flight"], st["price"])
+        if ov:
+            out = {**out, **ov}
         if st["price"]["total"] <= 0:
             err = ("state_corruption", "invalid total price in booking payload", 0)
             out = {**out, "status": "rejected"}
@@ -123,6 +154,8 @@ def run_agent(task: str = DEFAULT_TASK, seed: int = 42, failure: Optional[Failur
         start_idx, state = resume_from.step_index + 1, snap(resume_from.state_snapshot)
 
     rec = TraceRecorder()
+    if resume_from:
+        rec.prior_completed = list(resume_from.completed_steps)
     rec.start_run(task, scenario_id, parent_run_id=parent_run_id, run_id=run_id)
     failed_at: Optional[int] = None
 

@@ -2,7 +2,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 Status = Literal["running", "success", "failure", "skipped", "cancelled"]
 ErrorType = Literal[
@@ -14,6 +14,7 @@ def now() -> datetime:
     return datetime.now(timezone.utc)
 
 class Step(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)  # enforce status/error vocab on mutation
     run_id: str
     step_id: str
     parent_step_id: Optional[str] = None

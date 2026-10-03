@@ -1,19 +1,19 @@
 {
   "run": {
-    "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+    "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
     "parent_run_id": null,
     "task": "Find the cheapest flight from Mumbai to Delhi on 2026-10-04 under 6000 INR",
     "scenario_id": "flight_basic",
     "status": "failure",
     "agent_version": "agent-v1",
     "environment_version": "env-v1",
-    "start_time": "2026-10-03T11:08:47.087296Z",
-    "end_time": "2026-10-03T11:08:47.087898Z",
-    "root_checkpoint_id": "199eee1d-57e5-4967-af6d-fbb10234f7ed"
+    "start_time": "2026-10-03T11:28:19.850116Z",
+    "end_time": "2026-10-03T11:28:19.853410Z",
+    "root_checkpoint_id": "e2f06649-b5c5-4358-bcc2-d7dcbf6ad249"
   },
   "steps": [
     {
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-1",
       "parent_step_id": null,
       "step_index": 1,
@@ -41,11 +41,11 @@
       "error_message": null,
       "retry_count": 0,
       "dependency_ids": [],
-      "checkpoint_id": "199eee1d-57e5-4967-af6d-fbb10234f7ed",
-      "created_at": "2026-10-03T11:08:47.087359Z"
+      "checkpoint_id": "e2f06649-b5c5-4358-bcc2-d7dcbf6ad249",
+      "created_at": "2026-10-03T11:28:19.850116Z"
     },
     {
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-2",
       "parent_step_id": "step-1",
       "step_index": 2,
@@ -92,11 +92,11 @@
       "dependency_ids": [
         "step-1"
       ],
-      "checkpoint_id": "52ebf613-50df-49ab-a4a7-94320e0850b3",
-      "created_at": "2026-10-03T11:08:47.087431Z"
+      "checkpoint_id": "d30e9558-bbec-44d8-86dd-52c45770e5ef",
+      "created_at": "2026-10-03T11:28:19.851406Z"
     },
     {
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-3",
       "parent_step_id": "step-2",
       "step_index": 3,
@@ -118,20 +118,17 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ]
       },
@@ -164,20 +161,17 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ]
       },
@@ -192,11 +186,11 @@
       "dependency_ids": [
         "step-2"
       ],
-      "checkpoint_id": "987099f4-49ec-4fef-89cc-36f25e5d42e9",
-      "created_at": "2026-10-03T11:08:47.087503Z"
+      "checkpoint_id": "32f793b4-83d7-495c-8ff8-ee2f6568afa5",
+      "created_at": "2026-10-03T11:28:19.851406Z"
     },
     {
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-4",
       "parent_step_id": "step-3",
       "step_index": 4,
@@ -213,20 +207,17 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ]
       },
@@ -246,20 +237,17 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ]
       },
@@ -279,47 +267,40 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "candidates": [
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "selected_flight": {
           "id": "F101",
           "price": 3300,
-          "available": true,
-          "stale": true
+          "available": true
         }
       },
       "tool": "filter_flights",
@@ -333,11 +314,11 @@
       "dependency_ids": [
         "step-3"
       ],
-      "checkpoint_id": "1edc143b-9263-4be6-8822-50bf9bdadcc4",
-      "created_at": "2026-10-03T11:08:47.087600Z"
+      "checkpoint_id": "08540a84-ec0c-4b0f-8efb-2203e70da6f7",
+      "created_at": "2026-10-03T11:28:19.851406Z"
     },
     {
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-5",
       "parent_step_id": "step-4",
       "step_index": 5,
@@ -372,47 +353,40 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "candidates": [
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "selected_flight": {
           "id": "F101",
           "price": 3300,
-          "available": true,
-          "stale": true
+          "available": true
         }
       },
       "state_after": {
@@ -431,47 +405,40 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "candidates": [
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "selected_flight": {
           "id": "F101",
           "price": 3300,
-          "available": true,
-          "stale": true
+          "available": true
         },
         "availability": {
           "flight_id": "F101",
@@ -485,16 +452,16 @@
       "tokens": null,
       "status": "failure",
       "error_type": "retrieval_context_failure",
-      "error_message": "selected flight not actually available/valid",
+      "error_message": "selected flight does not match availability service",
       "retry_count": 1,
       "dependency_ids": [
         "step-4"
       ],
       "checkpoint_id": null,
-      "created_at": "2026-10-03T11:08:47.087696Z"
+      "created_at": "2026-10-03T11:28:19.852406Z"
     },
     {
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-6",
       "parent_step_id": "step-5",
       "step_index": 6,
@@ -526,47 +493,40 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "candidates": [
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "selected_flight": {
           "id": "F101",
           "price": 3300,
-          "available": true,
-          "stale": true
+          "available": true
         },
         "availability": {
           "flight_id": "F101",
@@ -590,47 +550,40 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "candidates": [
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "selected_flight": {
           "id": "F101",
           "price": 3300,
-          "available": true,
-          "stale": true
+          "available": true
         },
         "availability": {
           "flight_id": "F101",
@@ -651,10 +604,10 @@
         "step-4"
       ],
       "checkpoint_id": null,
-      "created_at": "2026-10-03T11:08:47.087808Z"
+      "created_at": "2026-10-03T11:28:19.852406Z"
     },
     {
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-7",
       "parent_step_id": "step-6",
       "step_index": 7,
@@ -686,47 +639,40 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "candidates": [
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "selected_flight": {
           "id": "F101",
           "price": 3300,
-          "available": true,
-          "stale": true
+          "available": true
         },
         "availability": {
           "flight_id": "F101",
@@ -750,47 +696,40 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "candidates": [
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "selected_flight": {
           "id": "F101",
           "price": 3300,
-          "available": true,
-          "stale": true
+          "available": true
         },
         "availability": {
           "flight_id": "F101",
@@ -811,13 +750,13 @@
         "step-4"
       ],
       "checkpoint_id": null,
-      "created_at": "2026-10-03T11:08:47.087866Z"
+      "created_at": "2026-10-03T11:28:19.853410Z"
     }
   ],
   "checkpoints": [
     {
-      "checkpoint_id": "199eee1d-57e5-4967-af6d-fbb10234f7ed",
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "checkpoint_id": "e2f06649-b5c5-4358-bcc2-d7dcbf6ad249",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-1",
       "step_index": 1,
       "state_snapshot": {
@@ -841,11 +780,11 @@
       "completed_steps": [
         "step-1"
       ],
-      "created_at": "2026-10-03T11:08:47.087416Z"
+      "created_at": "2026-10-03T11:28:19.850116Z"
     },
     {
-      "checkpoint_id": "52ebf613-50df-49ab-a4a7-94320e0850b3",
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "checkpoint_id": "d30e9558-bbec-44d8-86dd-52c45770e5ef",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-2",
       "step_index": 2,
       "state_snapshot": {
@@ -877,11 +816,11 @@
         "step-1",
         "step-2"
       ],
-      "created_at": "2026-10-03T11:08:47.087488Z"
+      "created_at": "2026-10-03T11:28:19.851406Z"
     },
     {
-      "checkpoint_id": "987099f4-49ec-4fef-89cc-36f25e5d42e9",
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "checkpoint_id": "32f793b4-83d7-495c-8ff8-ee2f6568afa5",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-3",
       "step_index": 3,
       "state_snapshot": {
@@ -900,20 +839,17 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ]
       },
@@ -934,11 +870,11 @@
         "step-2",
         "step-3"
       ],
-      "created_at": "2026-10-03T11:08:47.087578Z"
+      "created_at": "2026-10-03T11:28:19.851406Z"
     },
     {
-      "checkpoint_id": "1edc143b-9263-4be6-8822-50bf9bdadcc4",
-      "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+      "checkpoint_id": "08540a84-ec0c-4b0f-8efb-2203e70da6f7",
+      "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
       "step_id": "step-4",
       "step_index": 4,
       "state_snapshot": {
@@ -957,47 +893,40 @@
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "candidates": [
           {
             "id": "F101",
             "price": 3300,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F202",
             "price": 4200,
-            "available": true,
-            "stale": true
+            "available": true
           },
           {
             "id": "F303",
             "price": 5600,
-            "available": true,
-            "stale": true
+            "available": true
           }
         ],
         "selected_flight": {
           "id": "F101",
           "price": 3300,
-          "available": true,
-          "stale": true
+          "available": true
         }
       },
       "context_snapshot": {
@@ -1018,7 +947,7 @@
         "step-3",
         "step-4"
       ],
-      "created_at": "2026-10-03T11:08:47.087672Z"
+      "created_at": "2026-10-03T11:28:19.852406Z"
     }
   ],
   "graph": {
@@ -1111,7 +1040,7 @@
     ]
   },
   "ground_truth": {
-    "run_id": "0a73eb44-9698-40a0-bcbc-9dfbfdf2260c",
+    "run_id": "b3c8830a-f731-4746-9d84-f009c41fe81f",
     "scenario_id": "flight_basic",
     "seed": 42,
     "failure_type": "stale_search_result",
