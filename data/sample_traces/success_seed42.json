@@ -1,19 +1,19 @@
 {
   "run": {
-    "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+    "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
     "parent_run_id": null,
     "task": "Find the cheapest flight from Mumbai to Delhi on 2026-10-04 under 6000 INR",
     "scenario_id": "flight_basic",
     "status": "success",
     "agent_version": "agent-v1",
     "environment_version": "env-v1",
-    "start_time": "2026-10-03T11:28:19.837538Z",
-    "end_time": "2026-10-03T11:28:19.841017Z",
-    "root_checkpoint_id": "b8171d5e-bb9d-4da9-8957-1ab56c28c96e"
+    "start_time": "2026-10-03T18:31:25.712639Z",
+    "end_time": "2026-10-03T18:31:25.713497Z",
+    "root_checkpoint_id": "d3b9a784-3741-42b2-a7e7-3c004bc3bce0"
   },
   "steps": [
     {
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-1",
       "parent_step_id": null,
       "step_index": 1,
@@ -41,11 +41,11 @@
       "error_message": null,
       "retry_count": 0,
       "dependency_ids": [],
-      "checkpoint_id": "b8171d5e-bb9d-4da9-8957-1ab56c28c96e",
-      "created_at": "2026-10-03T11:28:19.838525Z"
+      "checkpoint_id": "d3b9a784-3741-42b2-a7e7-3c004bc3bce0",
+      "created_at": "2026-10-03T18:31:25.712687Z"
     },
     {
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-2",
       "parent_step_id": "step-1",
       "step_index": 2,
@@ -92,11 +92,11 @@
       "dependency_ids": [
         "step-1"
       ],
-      "checkpoint_id": "1353c91d-2695-4d1b-8ef0-a33952b17924",
-      "created_at": "2026-10-03T11:28:19.838827Z"
+      "checkpoint_id": "780846b1-ec4e-4657-aeb9-9b913f772c1d",
+      "created_at": "2026-10-03T18:31:25.712912Z"
     },
     {
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-3",
       "parent_step_id": "step-2",
       "step_index": 3,
@@ -186,11 +186,11 @@
       "dependency_ids": [
         "step-2"
       ],
-      "checkpoint_id": "5e4eca59-defe-477a-af49-1e329a089259",
-      "created_at": "2026-10-03T11:28:19.838827Z"
+      "checkpoint_id": "76a6f578-3576-44c5-85f7-489b9568c82e",
+      "created_at": "2026-10-03T18:31:25.712998Z"
     },
     {
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-4",
       "parent_step_id": "step-3",
       "step_index": 4,
@@ -304,11 +304,11 @@
       "dependency_ids": [
         "step-3"
       ],
-      "checkpoint_id": "f6867389-59b9-4a2f-a723-d3ea64e47e1e",
-      "created_at": "2026-10-03T11:28:19.839836Z"
+      "checkpoint_id": "2980059f-1753-4df0-b8ba-f9f426a5e06d",
+      "created_at": "2026-10-03T18:31:25.713094Z"
     },
     {
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-5",
       "parent_step_id": "step-4",
       "step_index": 5,
@@ -437,11 +437,11 @@
       "dependency_ids": [
         "step-4"
       ],
-      "checkpoint_id": "00350c47-0b96-48e8-a80c-63103833812c",
-      "created_at": "2026-10-03T11:28:19.839836Z"
+      "checkpoint_id": "f8b844d0-432a-44d3-aff3-edf7aad1bb61",
+      "created_at": "2026-10-03T18:31:25.713183Z"
     },
     {
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-6",
       "parent_step_id": "step-5",
       "step_index": 6,
@@ -582,11 +582,11 @@
         "step-5",
         "step-4"
       ],
-      "checkpoint_id": "0e4b94c7-e04f-424f-a4fa-700aef9faea5",
-      "created_at": "2026-10-03T11:28:19.839836Z"
+      "checkpoint_id": "37a334a7-e431-4f04-b91c-b0ba9af59d71",
+      "created_at": "2026-10-03T18:31:25.713298Z"
     },
     {
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-7",
       "parent_step_id": "step-6",
       "step_index": 7,
@@ -740,14 +740,14 @@
         "step-6",
         "step-4"
       ],
-      "checkpoint_id": "3c132675-5c2b-4321-b601-48d16d84d011",
-      "created_at": "2026-10-03T11:28:19.839836Z"
+      "checkpoint_id": "6a182788-5e2b-4ee6-a576-a1a815111efb",
+      "created_at": "2026-10-03T18:31:25.713405Z"
     }
   ],
   "checkpoints": [
     {
-      "checkpoint_id": "b8171d5e-bb9d-4da9-8957-1ab56c28c96e",
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "checkpoint_id": "d3b9a784-3741-42b2-a7e7-3c004bc3bce0",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-1",
       "step_index": 1,
       "state_snapshot": {
@@ -767,11 +767,11 @@
       "completed_steps": [
         "step-1"
       ],
-      "created_at": "2026-10-03T11:28:19.838827Z"
+      "created_at": "2026-10-03T18:31:25.712884Z"
     },
     {
-      "checkpoint_id": "1353c91d-2695-4d1b-8ef0-a33952b17924",
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "checkpoint_id": "780846b1-ec4e-4657-aeb9-9b913f772c1d",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-2",
       "step_index": 2,
       "state_snapshot": {
@@ -799,11 +799,11 @@
         "step-1",
         "step-2"
       ],
-      "created_at": "2026-10-03T11:28:19.838827Z"
+      "created_at": "2026-10-03T18:31:25.712983Z"
     },
     {
-      "checkpoint_id": "5e4eca59-defe-477a-af49-1e329a089259",
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "checkpoint_id": "76a6f578-3576-44c5-85f7-489b9568c82e",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-3",
       "step_index": 3,
       "state_snapshot": {
@@ -849,11 +849,11 @@
         "step-2",
         "step-3"
       ],
-      "created_at": "2026-10-03T11:28:19.838827Z"
+      "created_at": "2026-10-03T18:31:25.713075Z"
     },
     {
-      "checkpoint_id": "f6867389-59b9-4a2f-a723-d3ea64e47e1e",
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "checkpoint_id": "2980059f-1753-4df0-b8ba-f9f426a5e06d",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-4",
       "step_index": 4,
       "state_snapshot": {
@@ -917,11 +917,11 @@
         "step-3",
         "step-4"
       ],
-      "created_at": "2026-10-03T11:28:19.839836Z"
+      "created_at": "2026-10-03T18:31:25.713163Z"
     },
     {
-      "checkpoint_id": "00350c47-0b96-48e8-a80c-63103833812c",
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "checkpoint_id": "f8b844d0-432a-44d3-aff3-edf7aad1bb61",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-5",
       "step_index": 5,
       "state_snapshot": {
@@ -991,11 +991,11 @@
         "step-4",
         "step-5"
       ],
-      "created_at": "2026-10-03T11:28:19.839836Z"
+      "created_at": "2026-10-03T18:31:25.713276Z"
     },
     {
-      "checkpoint_id": "0e4b94c7-e04f-424f-a4fa-700aef9faea5",
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "checkpoint_id": "37a334a7-e431-4f04-b91c-b0ba9af59d71",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-6",
       "step_index": 6,
       "state_snapshot": {
@@ -1071,11 +1071,11 @@
         "step-5",
         "step-6"
       ],
-      "created_at": "2026-10-03T11:28:19.839836Z"
+      "created_at": "2026-10-03T18:31:25.713380Z"
     },
     {
-      "checkpoint_id": "3c132675-5c2b-4321-b601-48d16d84d011",
-      "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+      "checkpoint_id": "6a182788-5e2b-4ee6-a576-a1a815111efb",
+      "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
       "step_id": "step-7",
       "step_index": 7,
       "state_snapshot": {
@@ -1158,7 +1158,7 @@
         "step-6",
         "step-7"
       ],
-      "created_at": "2026-10-03T11:28:19.841017Z"
+      "created_at": "2026-10-03T18:31:25.713492Z"
     }
   ],
   "graph": {
@@ -1251,7 +1251,7 @@
     ]
   },
   "ground_truth": {
-    "run_id": "22f5d9e4-ddc8-436e-b05b-cb532a8c1ae0",
+    "run_id": "bbc43a50-81d7-4906-ae49-df5f91c01f5d",
     "scenario_id": "flight_basic",
     "seed": 42,
     "failure_type": null,

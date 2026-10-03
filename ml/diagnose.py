@@ -97,7 +97,15 @@ def diagnose_run(
 
     # Tabular feature DataFrame
     X_df = pd.DataFrame(feature_list, columns=FEATURE_NAMES).fillna(0.0)
-    probabilities = model.predict_proba(X_df)[:, 1]
+    probs = model.predict_proba(X_df)
+    if hasattr(model, "classes_") and len(model.classes_) > 1:
+        classes = list(model.classes_)
+        pos_idx = classes.index(1) if 1 in classes else (classes.index(True) if True in classes else 1)
+        probabilities = probs[:, pos_idx]
+    elif probs.ndim == 2 and probs.shape[1] > 1:
+        probabilities = probs[:, 1]
+    else:
+        probabilities = probs.ravel()
 
     # Assemble ranked steps
     ranked_steps: List[Dict[str, Any]] = []
