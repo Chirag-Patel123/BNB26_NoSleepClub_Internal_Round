@@ -297,10 +297,10 @@ if page == "Dashboard":
 
 elif page == "Run Investigation":
     
-    col_search, _ = st.columns([1, 2])
+    _, col_search, _ = st.columns([1, 2, 1])
     with col_search:
         run_id = st.text_input("Run ID", placeholder="Paste a Run ID from the Dashboard to investigate...")
-        load_btn = st.button("Load Trace", type="primary")
+        load_btn = st.button("Load Trace", type="primary", use_container_width=True)
         
     if load_btn and run_id:
         # Fancy Loading Animation
@@ -315,7 +315,7 @@ elif page == "Run Investigation":
         if run_data and run_data.get("run_id"):
             status_color = "#ef4444" if run_data.get('status') == 'failure' else "#10b981"
             st.markdown(f"""
-            <div class="glass-card animate-in" style="border-left: 5px solid {status_color}; animation-delay:0.1s;">
+            <div class="glass-card animate-in" style="border-top: 5px solid {status_color}; text-align:center; animation-delay:0.1s;">
                 <h2 style="font-weight:300; letter-spacing:1px;">Run Terminated: <span style="color:{status_color}; font-weight:800; text-transform:uppercase;">{run_data.get('status')}</span></h2>
                 <p style="color:#94a3b8;">Run ID: <code style="color:#e2e8f0;">{run_id}</code> | Scenario: <code style="color:#e2e8f0;">{run_data.get('metadata',{}).get('scenario_id')}</code></p>
             </div>
@@ -346,18 +346,18 @@ elif page == "Run Investigation":
             with tab2:
                 if diag_data:
                     st.markdown('<div class="animate-in" style="animation-delay:0.2s;">', unsafe_allow_html=True)
-                    st.markdown(f"<p style='color:#64748b; letter-spacing:1px;'><b>DIAGNOSIS ENGINE:</b> <code style='color:#0ea5e9;'>{diag_data.get('model_version')}</code> | <b>LATENCY:</b> <code style='color:#0ea5e9;'>{diag_data.get('diagnosis_latency_ms', 0)}ms</code></p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='color:#64748b; letter-spacing:1px; text-align:center;'><b>DIAGNOSIS ENGINE:</b> <code style='color:#0ea5e9;'>{diag_data.get('model_version')}</code> | <b>LATENCY:</b> <code style='color:#0ea5e9;'>{diag_data.get('diagnosis_latency_ms', 0)}ms</code></p>", unsafe_allow_html=True)
                     for rank in diag_data.get("ranked_steps", []):
                         st.markdown(f"""
-                        <div class="glass-card glass-card-danger" style="animation: pulseGlow 2.5s infinite; margin-top:20px;">
+                        <div class="glass-card glass-card-danger" style="animation: pulseGlow 2.5s infinite; margin-top:20px; text-align:center;">
                             <h3 style="margin:0; color:#ef4444; font-weight:400; letter-spacing:1px;">SUSPICIOUS STEP FLAGGED: <b>{rank['step_id']}</b></h3>
                             <h1 style="margin:10px 0; font-size:4.5rem; font-weight:900;">{rank['score']*100:.1f}%</h1>
                             <p style="color:#94a3b8; text-transform:uppercase; letter-spacing:2px; font-size:0.9rem;">Model Confidence Score</p>
                         </div>
-                        <h4 style="font-weight:300; letter-spacing:1px; margin-top:20px;">GROUND-TRUTH EVIDENCE TRAJECTORY</h4>
+                        <h4 style="font-weight:300; letter-spacing:1px; margin-top:20px; text-align:center;">GROUND-TRUTH EVIDENCE TRAJECTORY</h4>
                         """, unsafe_allow_html=True)
                         for ev in rank.get("evidence", []):
-                            st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:15px; border-radius:8px; margin-bottom:10px; border-left:3px solid #6366f1;'>{ev}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='background:rgba(255,255,255,0.05); padding:15px; border-radius:8px; margin-bottom:10px; border-left:3px solid #6366f1; text-align:left;'>{ev}</div>", unsafe_allow_html=True)
                     st.markdown('</div>', unsafe_allow_html=True)
                 else:
                     st.info("No diagnosis data available for this run.")
