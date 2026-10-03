@@ -23,12 +23,14 @@ export async function fetchRecentRuns() {
 }
 
 export async function fetchRun(id) {
+  if (!id || id === "undefined") throw new Error("Invalid run ID")
   const res = await fetch(`${BASE_URL}/runs/${id}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
 
 export async function fetchDiagnosis(id) {
+  if (!id || id === "undefined") throw new Error("Invalid run ID")
   const res = await fetch(`${BASE_URL}/runs/${id}/diagnosis`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
@@ -36,6 +38,7 @@ export async function fetchDiagnosis(id) {
 
 // Optional: if the backend exposes an LLM-written summary, the UI uses it; otherwise it falls back to the built-in one.
 export async function fetchSummaryApi(id) {
+  if (!id || id === "undefined") throw new Error("Invalid run ID")
   const res = await fetch(`${BASE_URL}/runs/${id}/summary`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()

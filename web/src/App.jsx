@@ -413,8 +413,8 @@ export default function App() {
         list.map(async r => {
           try {
             const [detail, diag] = await Promise.all([
-              fetchRun(r.run_id || r.id),
-              fetchDiagnosis(r.run_id || r.id).catch(() => null),
+              fetchRun(r.run_id || r.id || r["Run ID"]),
+              fetchDiagnosis(r.run_id || r.id || r["Run ID"]).catch(() => null),
             ])
             return formatBackendRun(detail, diag)
           } catch {
