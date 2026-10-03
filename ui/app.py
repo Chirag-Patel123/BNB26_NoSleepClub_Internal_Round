@@ -184,26 +184,27 @@ if page == "🎛️ Dashboard":
     st.plotly_chart(fig, use_container_width=True)
     
     st.markdown("### 📋 Recent Runs")
-    df = pd.DataFrame([
-        {"Run ID": "run-123", "Scenario": "flight_basic", "Steps": 7, "Status": "FAILURE", "Time": "2026-10-03 16:30"},
-        {"Run ID": "run-122", "Scenario": "flight_basic", "Steps": 7, "Status": "SUCCESS", "Time": "2026-10-03 16:25"},
-        {"Run ID": "run-121", "Scenario": "hotel_booking", "Steps": 5, "Status": "SUCCESS", "Time": "2026-10-03 16:15"},
-        {"Run ID": "run-120", "Scenario": "flight_basic", "Steps": 4, "Status": "FAILURE", "Time": "2026-10-03 16:10"},
-    ])
-    
-    def highlight_status(val):
-        color = '#00ffaa' if val == 'SUCCESS' else '#ff0032'
-        return f'color: {color}; font-weight: bold; text-shadow: 0 0 5px {color};'
-    
-    styled_df = df.style.map(highlight_status, subset=['Status'])
-    st.dataframe(styled_df, use_container_width=True)
+    recent_runs_data = fetch_api("/runs/recent")
+    if recent_runs_data:
+        df = pd.DataFrame(recent_runs_data)
+        def highlight_status(val):
+            color = '#00ffaa' if val == 'SUCCESS' else '#ff0032'
+            return f'color: {color}; font-weight: bold; text-shadow: 0 0 5px {color};'
+        styled_df = df.style.map(highlight_status, subset=['Status'])
+        st.dataframe(styled_df, use_container_width=True)
+        
+        # Display the first run's ID to make testing easier
+        if len(df) > 0:
+            st.info(f"💡 Try investigating a run ID like: `{df.iloc[0]['Run ID']}` in the **Run Investigation** tab.")
+    else:
+        st.info("No runs found in dataset.")
 
 elif page == "🔍 Run Investigation":
     st.title("🔍 Run Investigation")
     
     col_search, _ = st.columns([1, 2])
     with col_search:
-        run_id = st.text_input("Run ID", value="run-123")
+        run_id = st.text_input("Run ID", placeholder="Enter a run ID from the dashboard...")
         load_btn = st.button("Load Trace", type="primary")
         
     if load_btn or run_id:

@@ -8,75 +8,64 @@ import pathlib
 
 router = APIRouter()
 
-MOCK_STEP = {
-    "run_id": "run-123",
-    "step_id": "step-5",
-    "parent_step_id": "step-4",
-    "step_index": 5,
-    "step_type": "tool_call",
-    "input_summary": {"flight_id": "F101"},
-    "output_summary": {"available": False},
-    "state_before": {"selected_flight": "F101"},
-    "state_after": {"availability_checked": False},
-    "tool": "validate_availability",
-    "model": None,
-    "latency_ms": 120,
-    "tokens": None,
-    "status": "failure",
-    "error_type": "invalid_tool_output",
-    "error_message": "availability field inconsistent",
-    "retry_count": 1,
-    "dependency_ids": ["step-4"],
-    "checkpoint_id": "ckpt-5",
-    "created_at": "2026-10-03T10:00:00Z"
-}
+@router.get("/runs/recent")
+def recent_runs():
+    runs = []
+    try:
+        with open("data/synthetic/runs.jsonl", "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            for line in reversed(lines[-20:]):  # Get last 20 runs
+                data = json.loads(line)
+                run_info = data.get("run", {})
+                runs.append({
+                    "Run ID": run_info.get("run_id", "unknown"),
+                    "Scenario": run_info.get("scenario_id", "unknown"),
+                    "Steps": len(data.get("steps", [])),
+                    "Status": run_info.get("status", "unknown").upper(),
+                    "Time": run_info.get("start_time", "unknown")[:16].replace("T", " ")
+                })
+    except Exception as e:
+        print(f"Error loading runs: {e}")
+    return runs
 
-@router.post("/runs", response_model=RunResponse)
-def start_run(req: RunRequest):
-    return {"run_id": "run-123", "status": "running"}
-
-@router.get("/runs/compare", response_model=CompareResponse)
-def compare_runs(original_id: str, alternative_id: str):
-    return {
-        "original_run_id": original_id,
-        "alternative_run_id": alternative_id,
-        "common_prefix_steps": 4,
-        "changed_steps": ["step-5"],
-        "rerun_steps": ["step-5", "step-6", "step-7"],
-        "final_status_original": "failure",
-        "final_status_alternative": "success",
-        "runtime_original_ms": 2500,
-        "runtime_alternative_ms": 1100
-    }
-
-@router.get("/runs/{run_id}", response_model=RunDetailResponse)
+@router.get("/runs/{run_id}")
 def get_run(run_id: str):
-    return {
-        "run_id": run_id,
-        "status": "failure",
-        "metadata": {"scenario_id": "flight_basic", "agent_version": "v1.0"},
-        "ordered_steps": [Step(**MOCK_STEP)],
-        "checkpoints": [{"checkpoint_id": "ckpt-5", "step_id": "step-5"}],
-        "graph_relationships": {"step-4": ["step-5"]}
-    }
+    try:
+        with open("data/synthetic/runs.jsonl", "r", encoding="utf-8") as f:
+            for line in f:
+                data = json.loads(line)
+                if data.get("run", {}).get("run_id") == run_id:
+                    run_info = data.get("run", {})
+                    # Adapt the edges list into the dictionary format expected by the frontend
+                    edges_list = data.get("graph", {}).get("edges", [])
+                    graph_dict = {}
+                    for edge in edges_list:
+                        graph_dict.setdefault(edge["from"], []).append(edge["to"])
+                        
+                    return {
+                        "run_id": run_id,
+                        "status": run_info.get("status", "unknown"),
+                        "metadata": {"scenario_id": run_info.get("scenario_id")},
+                        "ordered_steps": data.get("steps", []),
+                        "checkpoints": data.get("checkpoints", []),
+                        "graph_relationships": graph_dict
+                    }
+    except Exception as e:
+        print(f"Error loading run {run_id}: {e}")
+    return {}
 
-@router.get("/runs/{run_id}/diagnosis", response_model=DiagnosisResponse)
+@router.get("/runs/{run_id}/diagnosis")
 def get_run_diagnosis(run_id: str):
-    return {
-        "run_id": run_id,
-        "ranked_steps": [
-            {
-                "step_id": "step-5",
-                "score": 0.91,
-                "evidence": [
-                    "output_valid=false",
-                    "retry_count=2",
-                    "steps 6 and 7 failed downstream"
-                ]
-            }
-        ],
-        "model_version": "rf-v1"
-    }
+    from ml.diagnose import diagnose_run
+    try:
+        with open("data/synthetic/runs.jsonl", "r", encoding="utf-8") as f:
+            for line in f:
+                data = json.loads(line)
+                if data.get("run", {}).get("run_id") == run_id:
+                    return diagnose_run(data)
+    except Exception as e:
+        print("Diagnosis error:", e)
+    return {}
 
 @router.post("/runs/{run_id}/replay", response_model=ReplayResponse)
 def replay_run(run_id: str, req: ReplayRequest):
