@@ -24,9 +24,15 @@ set ANTHROPIC_API_KEY=your-key-here          (Windows cmd)   |   export ANTHROPI
 set BLACKBOX_LLM_MODEL=claude-sonnet-5-5     (optional override)
 python -m agent.llm_pipeline generate --n 20 --agent-client anthropic --log-dir logs/claude_agent
 python -m agent.llm_pipeline evaluate --log-dir logs/claude_agent --analysis-client anthropic
+
+# real Groq (Llama-3.3-70b-versatile, ultra-fast & free tier available)
+set GROQ_API_KEY=your-key-here               (Windows cmd)   |   export GROQ_API_KEY=...        (bash)
+set GROQ_MODEL=llama-3.3-70b-versatile       (optional override)
+python -m agent.llm_pipeline generate --n 20 --agent-client groq --log-dir logs/groq_agent
+python -m agent.llm_pipeline evaluate --log-dir logs/groq_agent --analysis-client groq
 ```
 
-Add `ANTHROPIC_API_KEY=` and `BLACKBOX_LLM_MODEL=` (names only) to `.env.example`.
+Add `ANTHROPIC_API_KEY=`, `BLACKBOX_LLM_MODEL=`, `GROQ_API_KEY=`, and `GROQ_MODEL=` (names only) to `.env.example`.
 
 ## The agent
 A tool-using loop: the model chooses tools and arguments. Tools: `search_flights`, `check_availability`,

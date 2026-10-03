@@ -2,7 +2,7 @@ import json
 import httpx
 import pytest
 from agent.llm_agent import LLMFault, run_llm_agent, make_task
-from agent.llm_client import AnthropicClient, HeuristicBaseline, ScriptedAgentClient
+from agent.llm_client import AnthropicClient, GroqClient, HeuristicBaseline, ScriptedAgentClient
 from agent.llm_tools import ALL_FAULTS
 from agent import llm_pipeline as P
 from tracing.render import render_trace
@@ -134,3 +134,61 @@ def test_anthropic_client_requires_key(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     with pytest.raises(RuntimeError):
         AnthropicClient()
+
+
+def _mock_groq_api(script):
+    """Mock Groq OpenAI-compatible chat completion API returning scripted responses in order."""
+    state = {"i": 0, "requests": []}
+    def handler(request: httpx.Request):
+        body = json.loads(request.content)
+        state["requests"].append(body)
+        resp = script[state["i"]]
+        state["i"] += 1
+        msg = {"role": "assistant"}
+        if "tool_calls" in resp:
+            msg["tool_calls"] = resp["tool_calls"]
+        if "text" in resp:
+            msg["content"] = resp["text"]
+        return httpx.Response(200, json={
+            "choices": [{"message": msg}],
+            "usage": {"prompt_tokens": 12, "completion_tokens": 8}
+        })
+    return httpx.MockTransport(handler), state
+
+
+def test_groq_client_requires_key(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    with pytest.raises(RuntimeError):
+        GroqClient()
+
+
+def test_groq_client_complete():
+    script = [{"text": "Groq analysis completed."}]
+    transport, _ = _mock_groq_api(script)
+    client = GroqClient(api_key="test-groq-key", model="llama-3.3-70b-versatile", transport=transport)
+    res = client.complete("System prompt", "User question")
+    assert res == "Groq analysis completed."
+
+
+def test_groq_client_drives_real_tool_loop():
+    tc = lambda i, n, inp: {"id": i, "type": "function", "function": {"name": n, "arguments": json.dumps(inp)}}
+    script = [
+        {"text": "Searching.", "tool_calls": [tc("t1", "search_flights", {"origin": "BOM", "destination": "DEL", "date": "2026-10-04"})]},
+        {"tool_calls": [tc("t2", "check_availability", {"flight_id": "F101"})]},
+        {"tool_calls": [tc("t3", "calculate_price", {"flight_id": "F101", "passengers": 1})]},
+        None,
+    ]
+    ref = run_llm_agent(C, "flight_basic", 42, log_dir=None).result.steps[2].output_summary["total"]
+    script[3] = {"tool_calls": [tc("t4", "prepare_booking", {"flight_id": "F101", "total": ref})]}
+    script.append({"text": "Done."})
+    transport, state = _mock_groq_api(script)
+    client = GroqClient(api_key="test-groq-key", model="test-groq-model", transport=transport)
+    r = run_llm_agent(client, "flight_basic", 42, log_dir=None)
+    assert r.result.run.status == "success"
+    assert [s.tool for s in r.result.steps] == ["search_flights", "check_availability", "calculate_price", "prepare_booking", None]
+    assert all(s.model == "test-groq-model" for s in r.result.steps)
+    assert r.result.steps[0].tokens == 20
+    # second request carried tool result in OpenAI format
+    msgs = state["requests"][1]["messages"]
+    assert any(m["role"] == "tool" and m["tool_call_id"] == "t1" for m in msgs)
+

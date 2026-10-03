@@ -10,7 +10,7 @@ from typing import Any
 from tracing.render import render_trace
 from . import llm_tools as T
 from .llm_agent import LLMFault, run_llm_agent
-from .llm_client import AnthropicClient, HeuristicBaseline, ScriptedAgentClient
+from .llm_client import AnthropicClient, GroqClient, HeuristicBaseline, ScriptedAgentClient
 from .tools import SCENARIOS
 
 GEN_SYSTEM = (
@@ -27,10 +27,19 @@ DIAG_SYSTEM = (
     "\"reasoning\": \"<1-2 sentences>\"}. Quotes must be copied verbatim from the log.")
 
 def make_agent_client(name: str):
-    return AnthropicClient() if name == "anthropic" else ScriptedAgentClient()
+    if name == "anthropic":
+        return AnthropicClient()
+    if name == "groq":
+        return GroqClient()
+    return ScriptedAgentClient()
 
 def make_analysis_client(name: str):
-    return AnthropicClient() if name == "anthropic" else HeuristicBaseline()
+    if name == "anthropic":
+        return AnthropicClient()
+    if name == "groq":
+        return GroqClient()
+    return HeuristicBaseline()
+
 
 def generate_logs(n: int, seed: int, agent_client, log_dir: str, healthy_every: int = 8):
     """Deterministic mix: every supported fault x scenarios, plus healthy runs, cycled until n logs exist."""
@@ -113,8 +122,8 @@ def main(argv=None):
     ap.add_argument("--n", type=int, default=15)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--log-dir", default="logs/llm_agent")
-    ap.add_argument("--agent-client", default="scripted", choices=["scripted", "anthropic"])
-    ap.add_argument("--analysis-client", default="heuristic", choices=["heuristic", "anthropic"])
+    ap.add_argument("--agent-client", default="scripted", choices=["scripted", "anthropic", "groq"])
+    ap.add_argument("--analysis-client", default="heuristic", choices=["heuristic", "anthropic", "groq"])
     a = ap.parse_args(argv)
     if a.cmd == "generate":
         runs = generate_logs(a.n, a.seed, make_agent_client(a.agent_client), a.log_dir)

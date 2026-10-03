@@ -49,6 +49,119 @@ class AnthropicClient:
         return "".join(b.get("text", "") for b in data["content"] if b["type"] == "text")
 
 
+class GroqClient:
+    """Real model on Groq via OpenAI-compatible HTTPS API; needs GROQ_API_KEY.
+    Env: GROQ_MODEL (default llama-3.3-70b-versatile).
+    """
+    name = "groq"
+    DEFAULT_MODEL = "llama-3.3-70b-versatile"
+
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
+                 transport: Optional[httpx.BaseTransport] = None, timeout: float = 90.0):
+        key = api_key or os.getenv("GROQ_API_KEY")
+        if not key:
+            raise RuntimeError("GROQ_API_KEY is not set (put it in your local .env / environment, never in git)")
+        self.model = model or os.getenv("GROQ_MODEL", self.DEFAULT_MODEL)
+        self._http = httpx.Client(base_url="https://api.groq.com/openai/v1", timeout=timeout, transport=transport,
+                                  headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+
+    def _post(self, payload: dict) -> dict:
+        r = self._http.post("/chat/completions", json={**payload, "temperature": 0})
+        r.raise_for_status()
+        return r.json()
+
+    def complete(self, system: str, user: str, max_tokens: int = 1500) -> str:
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": user})
+        data = self._post({"model": self.model, "max_tokens": max_tokens, "messages": messages})
+        choice = data["choices"][0]["message"]
+        return choice.get("content") or ""
+
+    def step(self, system: str, messages: list, tools: list) -> dict:
+        openai_tools = [
+            {"type": "function", "function": {"name": t["name"], "description": t["description"], "parameters": t["input_schema"]}}
+            for t in tools
+        ]
+        openai_msgs = []
+        if system:
+            openai_msgs.append({"role": "system", "content": system})
+        for m in messages:
+            role = m["role"]
+            content = m["content"]
+            if isinstance(content, str):
+                openai_msgs.append({"role": role, "content": content})
+            elif isinstance(content, list):
+                tool_results = [b for b in content if isinstance(b, dict) and b.get("type") == "tool_result"]
+                tool_uses = [b for b in content if isinstance(b, dict) and b.get("type") == "tool_use"]
+                text_parts = [b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"]
+
+                if tool_results:
+                    for tr in tool_results:
+                        openai_msgs.append({
+                            "role": "tool",
+                            "tool_call_id": tr["tool_use_id"],
+                            "content": tr["content"]
+                        })
+                elif tool_uses:
+                    openai_msgs.append({
+                        "role": "assistant",
+                        "content": "".join(text_parts) or None,
+                        "tool_calls": [
+                            {
+                                "id": tu["id"],
+                                "type": "function",
+                                "function": {
+                                    "name": tu["name"],
+                                    "arguments": json.dumps(tu["input"])
+                                }
+                            }
+                            for tu in tool_uses
+                        ]
+                    })
+                else:
+                    openai_msgs.append({"role": role, "content": "".join(text_parts)})
+
+        t0 = time.time()
+        payload = {
+            "model": self.model,
+            "max_tokens": 1024,
+            "messages": openai_msgs,
+            "tools": openai_tools
+        }
+        data = self._post(payload)
+        choice = data["choices"][0]["message"]
+        text = choice.get("content") or ""
+        raw_tool_calls = choice.get("tool_calls") or []
+
+        blocks = []
+        if text:
+            blocks.append({"type": "text", "text": text})
+        tool_calls = []
+        for tc in raw_tool_calls:
+            fn = tc["function"]
+            try:
+                args = json.loads(fn.get("arguments", "{}"))
+            except Exception:
+                args = {}
+            tool_calls.append({"id": tc["id"], "name": fn["name"], "input": args})
+            blocks.append({"type": "tool_use", "id": tc["id"], "name": fn["name"], "input": args})
+
+        u = data.get("usage", {})
+        return {
+            "text": text,
+            "tool_calls": tool_calls,
+            "content": blocks,
+            "llm_ms": int((time.time() - t0) * 1000),
+            "usage": {
+                "input_tokens": u.get("prompt_tokens", 0),
+                "output_tokens": u.get("completion_tokens", 0)
+            }
+        }
+
+
+
 class ScriptedAgentClient:
     """Deterministic tool-using policy: search -> check -> price -> book, with simple retry/fallback behavior."""
     name = "scripted"
