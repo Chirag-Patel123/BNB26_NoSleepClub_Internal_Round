@@ -154,6 +154,7 @@ st.markdown("""
         border-radius: 12px !important;
         padding: 12px 16px !important;
         font-size: 1.1rem !important;
+        text-align: center !important;
         transition: all 0.3s ease !important;
     }
     .stSelectbox > div > div > div {
@@ -163,6 +164,7 @@ st.markdown("""
         border-radius: 12px !important;
         min-height: 50px !important;
         font-size: 1.1rem !important;
+        justify-content: center !important;
     }
     .stTextInput input:focus, .stTextArea textarea:focus {
         border-color: #0ea5e9 !important;
@@ -387,12 +389,12 @@ elif page == "Comparison":
     
     _, col_comp, _ = st.columns([1, 4, 1])
     with col_comp:
-        st.markdown('<div class="glass-card animate-in">', unsafe_allow_html=True)
-        cols = st.columns([1, 1, 1])
+        st.markdown('<div class="glass-card animate-in" style="text-align:center;">', unsafe_allow_html=True)
+        cols = st.columns([1, 1])
         orig_id = cols[0].text_input("Original Run", "run-123")
         alt_id = cols[1].text_input("Alternative Run", "run-456")
-        st.write("")
-        if cols[2].button("Run Comparative Analysis", type="primary", use_container_width=True):
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Run Comparative Analysis", type="primary", use_container_width=True):
             ph = st.empty()
             ph.markdown('<div class="big-spinner" style="width:50px;height:50px;border-width:3px;margin:10px auto;"></div>', unsafe_allow_html=True)
             time.sleep(1.5) # Fake loading
@@ -420,9 +422,9 @@ elif page == "Evaluation":
         # Super polished F1 display
         _, col_f1, _ = st.columns([1, 2, 1])
         with col_f1:
-            st.markdown('<div class="glass-card glass-card-neon animate-in" style="padding:50px; text-align:center;">', unsafe_allow_html=True)
-            st.markdown(f'<p class="f1-text">{metrics.get("rf_f1", 0):.4f}</p>', unsafe_allow_html=True)
-            st.markdown('<p class="f1-sub">Global F1 Score</p>', unsafe_allow_html=True)
+            st.markdown('<div class="glass-card glass-card-neon animate-in" style="padding:20px; text-align:center;">', unsafe_allow_html=True)
+            st.markdown(f'<h1 class="f1-text" style="margin-top:10px;">{metrics.get("rf_f1", 0):.4f}</h1>', unsafe_allow_html=True)
+            st.markdown('<p class="f1-sub" style="font-weight:900;">GLOBAL F1 SCORE</p>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
         
         _, col_L, col_R, _ = st.columns([1, 2, 2, 1])
