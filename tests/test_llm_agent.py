@@ -127,7 +127,7 @@ def test_groq_client_requires_key(monkeypatch):
 def test_groq_client_complete():
     script = [{"text": "Groq analysis completed."}]
     transport, _ = _mock_groq_api(script)
-    client = GroqClient(api_key="test-groq-key", model="llama-3.3-70b-versatile", transport=transport)
+    client = GroqClient(api_key="test-groq-key", model="openai/gpt-oss-120b", transport=transport)
     res = client.complete("System prompt", "User question")
     assert res == "Groq analysis completed."
 
