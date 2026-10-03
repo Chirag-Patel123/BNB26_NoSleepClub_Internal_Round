@@ -10,7 +10,7 @@
 ## Conventions (propose freezing at the next sync)
 - run_id / checkpoint_id: UUID strings. step_id: `step-N` (1-indexed, == step_index).
 - Injection names -> error_type: stale_search_result->retrieval_context_failure, incorrect_filtering->model_decision_failure,
-  invalid_tool_output->tool_output_failure, calculation_error->state_corruption, wrong_parameter->parameter_failure.
+  invalid_tool_output->tool_output_failure, calculation_error->state_corruption, wrong_parameter->parameter_failure (root-cause class only; the trace records what the detecting step saw, which for wrong_parameter is model_decision_failure at step-4).
 - Propagation: first detecting step = failure with its own error_type; every later step = failure/state_corruption "depends on failed step-N".
 - `ground_truth` is a SIDECAR (not on steps). P2 must keep it out of features.
 - Checkpoint after every successful step; `context_snapshot` holds task, scenario_id, seed, failure config, versions.
@@ -46,3 +46,4 @@
 - Known: for incorrect_filtering, ~30% of runs crash at the origin step itself (empty candidate list, group scenario). Other failure types always crash after the origin except invalid_tool_output (same step).
 - Dataset is very clean/deterministic, so expect near-perfect RandomForest scores; report honestly and show the held-out `flight_tight_budget` split.
 - Tests: `pytest -q` -> 42 passed.
+- Full documentation: docs/P1_AGENT_TRACE.md
