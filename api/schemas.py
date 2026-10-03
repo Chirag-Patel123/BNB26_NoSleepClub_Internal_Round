@@ -4,9 +4,9 @@ from datetime import datetime
 
 class RunRequest(BaseModel):
     scenario_id: str
-    seed: int
-    failure_type: str
-    target_step: str
+    seed: int = 42
+    failure_type: Optional[str] = None
+    target_step: Optional[str] = None
 
 class RunResponse(BaseModel):
     run_id: str

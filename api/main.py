@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from storage.database import init_db
+from storage.database import engine, init_db
+import storage.database as db
 from .routes import router
 
 @asynccontextmanager
@@ -23,3 +24,7 @@ app.include_router(router)
 @app.get("/")
 def root():
     return {"message": "Black Box API is running"}
+
+@app.get("/health")
+def health():
+    return {"db": db.engine.dialect.name}

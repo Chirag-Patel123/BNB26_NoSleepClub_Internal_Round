@@ -4,6 +4,7 @@ Provides typed access to runs, steps, checkpoints, diagnoses, experiments,
 and benchmarks. Supports both Pydantic schema instances and raw dicts.
 """
 from __future__ import annotations
+import uuid
 
 import logging
 from datetime import datetime, timezone
@@ -289,29 +290,67 @@ def save_run_result(result: RunResult) -> dict[str, Any]:
     }
 
 
+def _is_valid_uuid(val: Any) -> bool:
+    if not val or not isinstance(val, str):
+        return False
+    try:
+        uuid.UUID(val)
+        return True
+    except (ValueError, AttributeError):
+        return False
+
+
 def get_run(run_id: str) -> Optional[dict[str, Any]]:
-    with get_db() as s:
-        return RunRepository(s).get_run(run_id, s)
+    try:
+        with get_db() as s:
+            if s.bind.dialect.name == "postgresql" and not _is_valid_uuid(run_id):
+                return None
+            return RunRepository(s).get_run(run_id, s)
+    except Exception as e:
+        logger.debug(f"get_run error for {run_id}: {e}")
+        return None
 
 
 def get_ordered_steps(run_id: str) -> list[dict[str, Any]]:
-    with get_db() as s:
-        return StepRepository(s).get_ordered_steps(run_id, s)
+    try:
+        with get_db() as s:
+            if s.bind.dialect.name == "postgresql" and not _is_valid_uuid(run_id):
+                return []
+            return StepRepository(s).get_ordered_steps(run_id, s)
+    except Exception as e:
+        logger.debug(f"get_ordered_steps error for {run_id}: {e}")
+        return []
 
 
 def get_checkpoint(checkpoint_id: str) -> Optional[dict[str, Any]]:
-    with get_db() as s:
-        return CheckpointRepository(s).get_checkpoint(checkpoint_id, s)
+    try:
+        with get_db() as s:
+            if s.bind.dialect.name == "postgresql" and not _is_valid_uuid(checkpoint_id):
+                return None
+            return CheckpointRepository(s).get_checkpoint(checkpoint_id, s)
+    except Exception as e:
+        logger.debug(f"get_checkpoint error for {checkpoint_id}: {e}")
+        return None
 
 
 def get_checkpoints_for_run(run_id: str) -> list[dict[str, Any]]:
-    with get_db() as s:
-        return CheckpointRepository(s).get_checkpoints_for_run(run_id, s)
+    try:
+        with get_db() as s:
+            if s.bind.dialect.name == "postgresql" and not _is_valid_uuid(run_id):
+                return []
+            return CheckpointRepository(s).get_checkpoints_for_run(run_id, s)
+    except Exception as e:
+        logger.debug(f"get_checkpoints_for_run error for {run_id}: {e}")
+        return []
 
 
 def list_runs(limit: int = 50, scenario_id: Optional[str] = None, status: Optional[str] = None) -> list[dict[str, Any]]:
-    with get_db() as s:
-        return RunRepository(s).list_runs(limit=limit, scenario_id=scenario_id, status=status, session=s)
+    try:
+        with get_db() as s:
+            return RunRepository(s).list_runs(limit=limit, scenario_id=scenario_id, status=status, session=s)
+    except Exception as e:
+        logger.debug(f"list_runs error: {e}")
+        return []
 
 
 def save_diagnosis(diagnosis: dict[str, Any]) -> dict[str, Any]:
@@ -321,8 +360,14 @@ def save_diagnosis(diagnosis: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_diagnosis(run_id: str) -> Optional[dict[str, Any]]:
-    with get_db() as s:
-        return DiagnosisRepository(s).get_diagnosis(run_id, s)
+    try:
+        with get_db() as s:
+            if s.bind.dialect.name == "postgresql" and not _is_valid_uuid(run_id):
+                return None
+            return DiagnosisRepository(s).get_diagnosis(run_id, s)
+    except Exception as e:
+        logger.debug(f"get_diagnosis error for {run_id}: {e}")
+        return None
 
 
 def create_experiment(experiment: dict[str, Any]) -> dict[str, Any]:

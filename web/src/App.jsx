@@ -130,7 +130,8 @@ export default function App() {
   const [showStartModal, setShowStartModal] = useState(false)
   const first = useRef(true)
   const [live, setLive] = useState(false)
-  useEffect(() => { checkApiHealth().then(setLive) }, [])
+  const [apiFailed, setApiFailed] = useState(false)
+  useEffect(() => { checkApiHealth().then(isLive => { setLive(isLive); if (!isLive) setApiFailed(true); }) }, [])
   const [busy, setBusy] = useState('')
   const [last, setLast] = useState(null)
   const [tour, setTour] = useState(null)
@@ -201,6 +202,7 @@ export default function App() {
     try {
       const list = await fetchRecentRuns()
       if (!Array.isArray(list) || list.length === 0) { setMsg('The API has no runs yet. Start one with Run Agent'); return }
+      setApiFailed(false)
       const formatted = await Promise.all(
         list.map(async r => {
           try {
@@ -223,6 +225,7 @@ export default function App() {
         setMsg('The API answered, but no run details could be read')
       }
     } catch {
+      setApiFailed(true)
       setMsg('Could not reach the API. Showing sample data')
     } finally {
       setBusy('')
@@ -357,6 +360,7 @@ export default function App() {
             onReplay={(id, step) => onReplayFrom(id, step)}
             live={live}
             busy={busy}
+            apiFailed={apiFailed}
           />
         )}
         {page === 'Logs' && (

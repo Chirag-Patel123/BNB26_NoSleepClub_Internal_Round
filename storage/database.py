@@ -29,6 +29,8 @@ def get_database_url() -> str:
     """
     raw_url = getattr(config, "DB_URL", "") or os.getenv("SUPABASE_DB_URL", "")
     if not raw_url or "YourPasswordHere" in raw_url or "<" in raw_url:
+        if os.getenv("RAILWAY_ENVIRONMENT"):
+            raise RuntimeError("SUPABASE_DB_URL is not set")
         return "sqlite:///./blackbox_local.db"
 
     url = raw_url.strip()

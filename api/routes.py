@@ -1,24 +1,31 @@
+﻿import json
+import logging
+import os
+import pathlib
+import uuid
+
 from fastapi import APIRouter, HTTPException
+
 from .schemas import (
     RunRequest, RunResponse, ReplayRequest, ReplayResponse, 
     RunDetailResponse, DiagnosisResponse, CompareResponse, Step
 )
-import json
-import pathlib
-import uuid
-
 from agent.demo_agent import run_agent
-from agent.failure_injection import FailureConfig
+from agent.failure_injection import FailureConfig, INJECTIONS
 from storage.repositories import (
     save_run_result, get_run as repo_get_run, get_ordered_steps,
     get_checkpoints_for_run, get_diagnosis as repo_get_diagnosis,
-    save_diagnosis as repo_save_diagnosis
+    save_diagnosis as repo_save_diagnosis, list_runs
 )
 from ml.diagnose import diagnose_run
 from replay.counterfactual import run_counterfactual
 from replay.compare import compare_traces
 
+logger = logging.getLogger("blackbox.api.routes")
+
 router = APIRouter()
+
+USE_MOCK = os.getenv("USE_MOCK", "false").lower() == "true"
 
 MOCK_STEP = {
     "run_id": "run-123",
@@ -46,30 +53,55 @@ MOCK_STEP = {
 @router.get("/runs/recent")
 def recent_runs():
     runs = []
-    try:
-        with open("data/synthetic/runs.jsonl", "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            for line in reversed(lines[-20:]):  # Get last 20 runs
-                data = json.loads(line)
-                run_info = data.get("run", {})
+    if not USE_MOCK:
+        try:
+            db_runs = list_runs(limit=20)
+            for r in db_runs:
+                run_id = r.get("run_id", "unknown")
+                scenario = r.get("scenario_id", "unknown")
+                steps_count = len(get_ordered_steps(run_id))
+                status = str(r.get("status", "unknown")).upper()
+                raw_time = r.get("start_time") or r.get("created_at") or ""
+                time_str = str(raw_time)[:16].replace("T", " ") if raw_time else "unknown"
                 runs.append({
-                    "Run ID": run_info.get("run_id", "unknown"),
-                    "Scenario": run_info.get("scenario_id", "unknown"),
-                    "Steps": len(data.get("steps", [])),
-                    "Status": run_info.get("status", "unknown").upper(),
-                    "Time": run_info.get("start_time", "unknown")[:16].replace("T", " ")
+                    "Run ID": run_id,
+                    "Scenario": scenario,
+                    "Steps": steps_count,
+                    "Status": status,
+                    "Time": time_str
                 })
-    except Exception as e:
-        print(f"Error loading runs: {e}")
+        except Exception as e:
+            logger.warning(f"Error loading runs from database: {e}")
+
+    if not runs:
+        try:
+            with open("data/synthetic/runs.jsonl", "r", encoding="utf-8") as f:
+                lines = f.readlines()
+                for line in reversed(lines[-20:]):
+                    data = json.loads(line)
+                    run_info = data.get("run", {})
+                    raw_time = run_info.get("start_time") or run_info.get("created_at") or ""
+                    time_str = str(raw_time)[:16].replace("T", " ") if raw_time else "unknown"
+                    runs.append({
+                        "Run ID": run_info.get("run_id", "unknown"),
+                        "Scenario": run_info.get("scenario_id", "unknown"),
+                        "Steps": len(data.get("steps", [])),
+                        "Status": str(run_info.get("status", "unknown")).upper(),
+                        "Time": time_str
+                    })
+        except Exception as e:
+            logger.warning(f"Error loading synthetic runs: {e}")
+
     return runs
 
 @router.post("/runs", response_model=RunResponse)
 def start_run(req: RunRequest):
     failure = None
-    if req.failure_type and req.target_step:
+    if req.failure_type:
+        target_step = req.target_step or INJECTIONS.get(req.failure_type, ("step-3", ""))[0]
         failure = FailureConfig(
             failure_type=req.failure_type,
-            target_step=req.target_step,
+            target_step=target_step,
             seed=req.seed,
         )
     result = run_agent(
@@ -85,12 +117,11 @@ def start_run(req: RunRequest):
     except Exception:
         pass
 
-    # Real final status (or 'running' if still in progress)
     return {"run_id": result.run.run_id, "status": result.run.status}
 
 @router.get("/runs/compare", response_model=CompareResponse)
 def compare_runs(original_id: str, alternative_id: str):
-    if original_id == "run-123" and alternative_id == "run-456":
+    if USE_MOCK and original_id == "run-123" and alternative_id == "run-456":
         return {
             "original_run_id": original_id,
             "alternative_run_id": alternative_id,
@@ -117,7 +148,7 @@ def compare_runs(original_id: str, alternative_id: str):
             "runtime_alternative_ms": diff["runtime_alternative_ms"],
         }
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Comparison failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/runs/{run_id}", response_model=RunDetailResponse)
 def get_run(run_id: str):
@@ -166,10 +197,10 @@ def get_run(run_id: str):
                         "graph_relationships": graph_dict
                     }
     except Exception as e:
-        print(f"Error loading run {run_id}: {e}")
+        logger.warning(f"Error loading synthetic run {run_id}: {e}")
 
-    # 3. Mock fallback for test client
-    if run_id == "run-123":
+    # 3. Mock fallback only when USE_MOCK is True
+    if USE_MOCK and run_id == "run-123":
         return {
             "run_id": run_id,
             "status": "failure",
@@ -205,10 +236,10 @@ def get_run_diagnosis(run_id: str):
                         "model_version": diag.get("model_version", "rf-v1")
                     }
     except Exception as e:
-        print("Diagnosis error:", e)
+        logger.warning(f"Synthetic diagnosis error: {e}")
 
-    # 3. Mock fallback for test client
-    if run_id == "run-123":
+    # 3. Mock fallback only when USE_MOCK is True
+    if USE_MOCK and run_id == "run-123":
         return {
             "run_id": run_id,
             "ranked_steps": [
@@ -229,7 +260,7 @@ def get_run_diagnosis(run_id: str):
 
 @router.post("/runs/{run_id}/replay", response_model=ReplayResponse)
 def replay_run(run_id: str, req: ReplayRequest):
-    if run_id == "run-123" and req.checkpoint_id == "ckpt-5":
+    if USE_MOCK and run_id == "run-123" and req.checkpoint_id == "ckpt-5":
         return {
             "original_run_id": run_id,
             "alternative_run_id": "run-456"
@@ -251,7 +282,7 @@ def replay_run(run_id: str, req: ReplayRequest):
             "alternative_run_id": exp["new_run_id"]
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Replay failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/evaluation")
 def get_evaluation():

@@ -1,12 +1,16 @@
-// Backend access. Defaults to http://localhost:8000.
-export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { API_BASE } from './config.js'
+
+// Backend access. Defaults to API_BASE from config.js.
+export const BASE_URL = API_BASE
 
 // Module-level live flag — set to true once the health check passes.
 // Components can import this to know whether they're connected to the real API.
 export async function checkApiHealth() {
   try {
-    const res = await fetch(BASE_URL + '/', { method: 'GET' })
-    return res.ok && (res.headers.get('content-type') || '').includes('json')
+    const res = await fetch(`${API_BASE}/health`, { method: 'GET' })
+    if (res.ok) return true
+    const fallback = await fetch(`${API_BASE}/`, { method: 'GET' })
+    return fallback.ok
   } catch {
     return false
   }

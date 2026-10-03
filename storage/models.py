@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import (
+    Uuid,
     BigInteger,
     Column,
     DateTime,
@@ -32,12 +33,14 @@ def now_utc() -> datetime:
 def gen_uuid() -> str:
     return str(uuid.uuid4())
 
+UUID_TYPE = Uuid(as_uuid=False).with_variant(String(36), "sqlite")
+
 
 class RunModel(Base):
     __tablename__ = "runs"
 
-    run_id = Column(String(36), primary_key=True, default=gen_uuid)
-    parent_run_id = Column(String(36), ForeignKey("runs.run_id", ondelete="SET NULL"), nullable=True)
+    run_id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
+    parent_run_id = Column(UUID_TYPE, ForeignKey("runs.run_id", ondelete="SET NULL"), nullable=True)
     task = Column(Text, nullable=False)
     scenario_id = Column(String(100), nullable=False)
     status = Column(String(50), nullable=False)
@@ -45,7 +48,7 @@ class RunModel(Base):
     environment_version = Column(String(50), default="env-v1")
     start_time = Column(DateTime(timezone=True), nullable=True)
     end_time = Column(DateTime(timezone=True), nullable=True)
-    root_checkpoint_id = Column(String(36), nullable=True)
+    root_checkpoint_id = Column(UUID_TYPE, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
 
     # Relationships
@@ -79,7 +82,7 @@ class StepModel(Base):
     __tablename__ = "steps"
 
     id = Column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
-    run_id = Column(String(36), ForeignKey("runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    run_id = Column(UUID_TYPE, ForeignKey("runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
     step_id = Column(String(50), nullable=False)
     parent_step_id = Column(String(50), nullable=True)
     step_index = Column(Integer, nullable=False)
@@ -97,7 +100,7 @@ class StepModel(Base):
     error_message = Column(Text, nullable=True)
     retry_count = Column(Integer, default=0, nullable=False)
     dependency_ids = Column(JSON, default=list, nullable=False)
-    checkpoint_id = Column(String(36), nullable=True)
+    checkpoint_id = Column(UUID_TYPE, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now_utc, nullable=False)
 
     # Relationships
@@ -136,8 +139,8 @@ class StepModel(Base):
 class CheckpointModel(Base):
     __tablename__ = "checkpoints"
 
-    checkpoint_id = Column(String(36), primary_key=True, default=gen_uuid)
-    run_id = Column(String(36), ForeignKey("runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    checkpoint_id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
+    run_id = Column(UUID_TYPE, ForeignKey("runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
     step_id = Column(String(50), nullable=False)
     step_index = Column(Integer, nullable=False)
     state_snapshot = Column(JSON, nullable=False)
@@ -165,7 +168,7 @@ class DiagnosisModel(Base):
     __tablename__ = "diagnoses"
 
     id = Column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
-    run_id = Column(String(36), ForeignKey("runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    run_id = Column(UUID_TYPE, ForeignKey("runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
     model_version = Column(String(100), nullable=False)
     ranked_steps = Column(JSON, nullable=False)
     diagnosis_latency_ms = Column(Integer, nullable=True)
@@ -187,8 +190,8 @@ class DiagnosisModel(Base):
 class ExperimentModel(Base):
     __tablename__ = "experiments"
 
-    experiment_id = Column(String(36), primary_key=True, default=gen_uuid)
-    parent_run_id = Column(String(36), ForeignKey("runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    experiment_id = Column(UUID_TYPE, primary_key=True, default=gen_uuid)
+    parent_run_id = Column(UUID_TYPE, ForeignKey("runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
     checkpoint_id = Column(String(36), ForeignKey("checkpoints.checkpoint_id", ondelete="RESTRICT"), nullable=False)
     modified_step = Column(String(50), nullable=False)
     modification_type = Column(String(50), nullable=False)

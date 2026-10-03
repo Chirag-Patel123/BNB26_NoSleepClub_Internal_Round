@@ -81,7 +81,7 @@ function EvalChart({ sample }) {
   )
 }
 
-export function Overview({ runs, go, onOpenStartModal, onRefreshRuns, onInvestigate, onReplay, live, busy }) {
+export function Overview({ runs, go, onOpenStartModal, onRefreshRuns, onInvestigate, onReplay, live, busy, apiFailed }) {
   const failures = runs.filter(r => !r.ok).length
   const cards = [
     ['Investigate', 'Find the suspicious step', 'See the ranked diagnosis and the evidence behind it.', 'search_insights'],
@@ -104,7 +104,7 @@ export function Overview({ runs, go, onOpenStartModal, onRefreshRuns, onInvestig
         <div style={{ marginTop: 14 }}><Graph run={runs.find(r => !r.ok) || runs[0]} /></div>
       </div>
 
-      {!live && (
+      {!live && apiFailed && (
         <div style={{ marginTop: 'var(--gap)' }}>
           <Calls color="var(--wn)"><Icon n="cloud_off" /> <b>Showing sample data.</b> Start the backend (<span className="mono">python main.py</span>) and press Refresh to load live runs.</Calls>
         </div>
