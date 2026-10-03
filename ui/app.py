@@ -1,29 +1,62 @@
 import streamlit as st
 import requests
 import pandas as pd
+import plotly.express as px
+import numpy as np
 
 API_URL = "http://localhost:8000"
 
 st.set_page_config(page_title="Black Box", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for aesthetics
+# Custom CSS for Glassmorphism & Neon aesthetics
 st.markdown("""
 <style>
-    .reportview-container {
-        background: #fafafa;
+    /* Main background */
+    .stApp {
+        background-color: #0b0f19;
+        color: #e2e8f0;
     }
-    .metric-card {
-        background-color: #ffffff;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    
+    /* Neon Text & Glassmorphism cards */
+    .metric-card-cyan {
+        background: rgba(13, 25, 48, 0.6);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 255, 255, 0.2);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .metric-card-red {
+        background: rgba(48, 13, 13, 0.6);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 0, 50, 0.2);
+        box-shadow: 0 0 10px rgba(255, 0, 50, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    /* Hide default metric styles to use our custom cards */
+    div[data-testid="stMetricValue"] {
+        font-size: 2rem;
+        font-weight: 800;
+        text-shadow: 0 0 5px rgba(255,255,255,0.3);
     }
 </style>
 """, unsafe_allow_html=True)
 
 st.sidebar.title("⬛ Black Box")
 st.sidebar.markdown("### Agent Flight Recorder")
-page = st.sidebar.radio("Navigation", ["Dashboard", "Run Investigation", "Replay Lab", "Comparison", "Evaluation"])
+page = st.sidebar.radio("Navigation", [
+    "🎛️ Dashboard", 
+    "🔍 Run Investigation", 
+    "🔬 Replay Lab", 
+    "⚖️ Comparison", 
+    "📊 Evaluation"
+])
 
 def fetch_api(endpoint):
     try:
@@ -35,24 +68,62 @@ def fetch_api(endpoint):
         st.warning(f"Failed to connect to API: {e} (Is the backend running?)")
     return None
 
-if page == "Dashboard":
-    st.title("Runs Dashboard")
+if page == "🎛️ Dashboard":
+    st.title("🎛️ System Dashboard")
     
+    # Custom Glass Metrics
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total Executions", "152", "+12 this hour")
-    col2.metric("Success Rate", "87%", "-2%")
-    col3.metric("Critical Failures", "20", "Requires Investigation")
     
-    st.markdown("### Recent Runs")
+    with col1:
+        st.markdown('<div class="metric-card-cyan">', unsafe_allow_html=True)
+        st.metric("Total Executions", "152", "+12 this hour")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with col2:
+        st.markdown('<div class="metric-card-cyan">', unsafe_allow_html=True)
+        st.metric("Success Rate", "87%", "-2%")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with col3:
+        st.markdown('<div class="metric-card-red">', unsafe_allow_html=True)
+        st.metric("Critical Failures", "20", "Requires Investigation", delta_color="inverse")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown("### ⚡ System Pulse")
+    # Generate mock pulse data
+    times = pd.date_range(end=pd.Timestamp.now(), periods=60, freq="1min")
+    volumes = np.random.poisson(lam=5, size=60)
+    pulse_df = pd.DataFrame({"Time": times, "Volume": volumes})
+    
+    fig = px.area(pulse_df, x="Time", y="Volume", 
+                  color_discrete_sequence=["#00ffff"])
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font_color="#e2e8f0",
+        margin=dict(l=0, r=0, t=10, b=0),
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.1)")
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("### 📋 Recent Runs")
     df = pd.DataFrame([
         {"Run ID": "run-123", "Scenario": "flight_basic", "Steps": 7, "Status": "FAILURE", "Time": "2026-10-03 16:30"},
         {"Run ID": "run-122", "Scenario": "flight_basic", "Steps": 7, "Status": "SUCCESS", "Time": "2026-10-03 16:25"},
-        {"Run ID": "run-121", "Scenario": "hotel_booking", "Steps": 5, "Status": "SUCCESS", "Time": "2026-10-03 16:15"}
+        {"Run ID": "run-121", "Scenario": "hotel_booking", "Steps": 5, "Status": "SUCCESS", "Time": "2026-10-03 16:15"},
+        {"Run ID": "run-120", "Scenario": "flight_basic", "Steps": 4, "Status": "FAILURE", "Time": "2026-10-03 16:10"},
     ])
-    st.dataframe(df, use_container_width=True)
+    
+    def highlight_status(val):
+        color = '#00ffaa' if val == 'SUCCESS' else '#ff0032'
+        return f'color: {color}; font-weight: bold; text-shadow: 0 0 5px {color};'
+    
+    styled_df = df.style.map(highlight_status, subset=['Status'])
+    st.dataframe(styled_df, use_container_width=True)
 
-elif page == "Run Investigation":
-    st.title("Run Investigation")
+elif page == "🔍 Run Investigation":
+    st.title("🔍 Run Investigation")
     
     col_search, _ = st.columns([1, 2])
     with col_search:
@@ -100,8 +171,8 @@ elif page == "Run Investigation":
                 else:
                     st.info("No diagnosis data available for this run.")
 
-elif page == "Replay Lab":
-    st.title("Replay Lab")
+elif page == "🔬 Replay Lab":
+    st.title("🔬 Replay Lab")
     st.markdown("Modify state from a known checkpoint and run counterfactuals.")
     
     with st.form("replay_form"):
@@ -112,14 +183,13 @@ elif page == "Replay Lab":
         if st.form_submit_button("Run Counterfactual", type="primary"):
             st.success("Counterfactual run started. Generated new Run ID: run-456")
 
-elif page == "Comparison":
-    st.title("Trace Comparison")
+elif page == "⚖️ Comparison":
+    st.title("⚖️ Trace Comparison")
     st.markdown("Compare the original failure against the counterfactual replay.")
     
     cols = st.columns([1, 1, 1])
     orig_id = cols[0].text_input("Original Run", "run-123")
     alt_id = cols[1].text_input("Alternative Run", "run-456")
-    # For spacing
     st.write("")
     if cols[2].button("Compare", type="primary", use_container_width=True):
         data = fetch_api(f"/runs/compare?original_id={orig_id}&alternative_id={alt_id}")
@@ -135,8 +205,8 @@ elif page == "Comparison":
             st.write(f"Original Status: **{data.get('final_status_original', '').upper()}**")
             st.write(f"Counterfactual Status: **{data.get('final_status_alternative', '').upper()}**")
 
-elif page == "Evaluation":
-    st.title("Evaluation Metrics")
+elif page == "📊 Evaluation":
+    st.title("📊 Evaluation Metrics")
     data = fetch_api("/evaluation")
     if data:
         metrics = data.get("metrics", {})
