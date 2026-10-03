@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { seed, replayRun } from './data.js'
+import { seed, replayRun, mk } from './data.js'
 import { Icon } from './ui.jsx'
+import DemoController, { DEMO_SCENARIOS, DEMO_STEPS } from './DemoController.jsx'
 import { Overview, Logs, Investigate, Replay, Compare, Evaluation } from './pages.jsx'
 import {
   fetchRecentRuns,
@@ -134,6 +135,60 @@ export default function App() {
   const [last, setLast] = useState(null)
   const [tour, setTour] = useState(null)
 
+  const [demoActive, setDemoActive] = useState(true)
+  const [demoScenario, setDemoScenario] = useState('calculation_error')
+  const [demoStep, setDemoStep] = useState(1)
+  const [theme, setTheme] = useState('dark')
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    document.documentElement.dataset.theme = next
+  }
+
+  const onSelectScenario = scId => {
+    setDemoScenario(scId)
+    const sc = DEMO_SCENARIOS[scId]
+    if (!sc) return
+    let target = runs.find(r => r.ft === scId && !r.ok)
+    if (!target) {
+      target = mk(scId, 0)
+      setRuns(prev => [target, ...prev])
+    }
+    setRid(target.id)
+    setCp(sc.fixCheckpoint)
+    setVal(sc.fixPayload)
+    setDemoStep(1)
+    setPage('Overview')
+    setMsg(`Switched to Demo Scenario: ${sc.name}`)
+  }
+
+  const onExecuteFix = () => {
+    const sc = DEMO_SCENARIOS[demoScenario] || DEMO_SCENARIOS.calculation_error
+    const target = runs.find(r => r.id === rid) || runs.find(r => r.ft === sc.id && !r.ok) || runs[0]
+    const fixedRun = replayRun(target, sc.fixCheckpoint)
+    setRuns(prev => [fixedRun, ...prev])
+    setCmp({ a: target.id, b: fixedRun.id })
+    setLast({ a: target.id, b: fixedRun.id, cp: sc.fixCheckpoint })
+    setDemoStep(5)
+    setPage('Compare')
+    setMsg('⚡ Counterfactual fix executed! Compare shows cached steps and fixed outcome.')
+  }
+
+  const onResetDemo = () => {
+    setDemoStep(1)
+    const sc = DEMO_SCENARIOS[demoScenario] || DEMO_SCENARIOS.calculation_error
+    const target = runs.find(r => r.ft === sc.id && !r.ok) || runs[0]
+    setRid(target.id)
+    setPage('Overview')
+    setMsg('Demo reset to Step 1.')
+  }
+
+  const currentDemoSc = DEMO_SCENARIOS[demoScenario] || DEMO_SCENARIOS.calculation_error
+  const demoHl = demoActive && page === 'Investigate'
+    ? (demoStep === 2 ? currentDemoSc.originStep - 1 : demoStep === 3 ? currentDemoSc.originStep - 1 : null)
+    : null
+
   // Move focus to the new page title when the page changes (keyboard / screen-reader users).
   useEffect(() => {
     if (first.current) { first.current = false; return }
@@ -265,10 +320,33 @@ export default function App() {
       <header>
         <div className="brand"><div className="mark"><Icon n="diamond" /></div>Black Box</div>
         <div className="btn-group">
-          <button className="btn sec sm" onClick={startTour}><Icon n="slideshow" /> Guided tour</button>
+          <button
+            className={`btn sm ${demoActive ? 'pri' : 'sec'}`}
+            onClick={() => setDemoActive(!demoActive)}
+            title="Toggle Guided Demo Mode"
+          >
+            <Icon n="play_circle" /> {demoActive ? 'Demo Mode: ON' : 'Demo Mode'}
+          </button>
+          <button className="btn sec sm" onClick={toggleTheme} title="Toggle Dark/Light Mode">
+            <Icon n={theme === 'dark' ? 'light_mode' : 'dark_mode'} />
+          </button>
+          <button className="btn sec sm" onClick={startTour}><Icon n="slideshow" /> Tour</button>
           <span className="pill"><Icon n="science" /> {live ? 'Live API' : 'Sample data'}</span>
         </div>
       </header>
+
+      <DemoController
+        active={demoActive}
+        onToggle={() => setDemoActive(false)}
+        currentScenario={demoScenario}
+        onSelectScenario={onSelectScenario}
+        demoStep={demoStep}
+        setDemoStep={setDemoStep}
+        onExecuteFix={onExecuteFix}
+        goToPage={setPage}
+        onResetDemo={onResetDemo}
+      />
+
       <nav aria-label="Main sections">
         {PAGES.map(([p, ic]) => (
           <button key={p} className={p === page ? 'on' : ''} aria-current={p === page ? 'page' : undefined} onClick={() => setPage(p)}><Icon n={ic} /> {p}</button>
@@ -310,6 +388,7 @@ export default function App() {
             hasCompare={hasCompare}
             live={live}
             busy={busy}
+            demoHl={demoHl}
           />
         )}
         {page === 'Replay' && (
