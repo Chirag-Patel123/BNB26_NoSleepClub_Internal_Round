@@ -1,0 +1,568 @@
+{
+ "meta": {
+  "run_id": "51a3f077-30ff-480a-aa85-9b68c3aef535",
+  "client": "scripted",
+  "model": "scripted-policy-v1",
+  "scenario_id": "flight_tight_budget"
+ },
+ "trace": {
+  "run": {
+   "run_id": "51a3f077-30ff-480a-aa85-9b68c3aef535",
+   "parent_run_id": null,
+   "task": "Find the cheapest flight from Mumbai (BOM) to Delhi (DEL) on 2026-10-04 under 5600 INR for 1 passenger(s). Prepare the booking when done.",
+   "scenario_id": "flight_tight_budget",
+   "status": "failure",
+   "agent_version": "llm-agent-v1",
+   "environment_version": "env-v1",
+   "start_time": "2026-10-03T16:46:44.657490Z",
+   "end_time": "2026-10-03T16:46:44.657985Z",
+   "root_checkpoint_id": null
+  },
+  "steps": [
+   {
+    "run_id": "51a3f077-30ff-480a-aa85-9b68c3aef535",
+    "step_id": "step-1",
+    "parent_step_id": null,
+    "step_index": 1,
+    "step_type": "tool_call",
+    "input_summary": {
+     "args": {
+      "origin": "BOM",
+      "destination": "DEL",
+      "date": "2026-10-04"
+     },
+     "agent_note": "Searching for flights."
+    },
+    "output_summary": {
+     "results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ]
+    },
+    "state_before": {
+     "search_results": [],
+     "booking": null
+    },
+    "state_after": {
+     "search_results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ],
+     "booking": null
+    },
+    "tool": "search_flights",
+    "model": "scripted-policy-v1",
+    "latency_ms": 87,
+    "tokens": null,
+    "status": "success",
+    "error_type": null,
+    "error_message": null,
+    "retry_count": 0,
+    "dependency_ids": [],
+    "checkpoint_id": null,
+    "created_at": "2026-10-03T16:46:44.657541Z"
+   },
+   {
+    "run_id": "51a3f077-30ff-480a-aa85-9b68c3aef535",
+    "step_id": "step-2",
+    "parent_step_id": "step-1",
+    "step_index": 2,
+    "step_type": "tool_call",
+    "input_summary": {
+     "args": {
+      "flight_id": "F101"
+     },
+     "agent_note": "Checking the cheapest option."
+    },
+    "output_summary": {
+     "flight_id": "F101",
+     "available": true,
+     "seats_left": 4
+    },
+    "state_before": {
+     "search_results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ],
+     "booking": null
+    },
+    "state_after": {
+     "search_results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ],
+     "booking": null
+    },
+    "tool": "check_availability",
+    "model": "scripted-policy-v1",
+    "latency_ms": 91,
+    "tokens": null,
+    "status": "success",
+    "error_type": null,
+    "error_message": null,
+    "retry_count": 0,
+    "dependency_ids": [
+     "step-1"
+    ],
+    "checkpoint_id": null,
+    "created_at": "2026-10-03T16:46:44.657654Z"
+   },
+   {
+    "run_id": "51a3f077-30ff-480a-aa85-9b68c3aef535",
+    "step_id": "step-3",
+    "parent_step_id": "step-2",
+    "step_index": 3,
+    "step_type": "tool_call",
+    "input_summary": {
+     "args": {
+      "flight_id": "F101",
+      "passengers": 0
+     },
+     "agent_note": "Calculating the price."
+    },
+    "output_summary": {
+     "error": "invalid_parameter",
+     "message": "passengers must be an integer >= 1"
+    },
+    "state_before": {
+     "search_results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ],
+     "booking": null
+    },
+    "state_after": {
+     "search_results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ],
+     "booking": null
+    },
+    "tool": "calculate_price",
+    "model": "scripted-policy-v1",
+    "latency_ms": 95,
+    "tokens": null,
+    "status": "failure",
+    "error_type": "parameter_failure",
+    "error_message": "passengers must be an integer >= 1",
+    "retry_count": 0,
+    "dependency_ids": [
+     "step-1",
+     "step-2"
+    ],
+    "checkpoint_id": null,
+    "created_at": "2026-10-03T16:46:44.657774Z"
+   },
+   {
+    "run_id": "51a3f077-30ff-480a-aa85-9b68c3aef535",
+    "step_id": "step-4",
+    "parent_step_id": "step-3",
+    "step_index": 4,
+    "step_type": "tool_call",
+    "input_summary": {
+     "args": {
+      "flight_id": "F101",
+      "passengers": 0
+     },
+     "agent_note": "Pricing failed; retrying."
+    },
+    "output_summary": {
+     "error": "invalid_parameter",
+     "message": "passengers must be an integer >= 1"
+    },
+    "state_before": {
+     "search_results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ],
+     "booking": null
+    },
+    "state_after": {
+     "search_results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ],
+     "booking": null
+    },
+    "tool": "calculate_price",
+    "model": "scripted-policy-v1",
+    "latency_ms": 132,
+    "tokens": null,
+    "status": "failure",
+    "error_type": "parameter_failure",
+    "error_message": "passengers must be an integer >= 1",
+    "retry_count": 1,
+    "dependency_ids": [
+     "step-1",
+     "step-3"
+    ],
+    "checkpoint_id": null,
+    "created_at": "2026-10-03T16:46:44.657869Z"
+   },
+   {
+    "run_id": "51a3f077-30ff-480a-aa85-9b68c3aef535",
+    "step_id": "step-5",
+    "parent_step_id": "step-4",
+    "step_index": 5,
+    "step_type": "final_answer",
+    "input_summary": {},
+    "output_summary": {
+     "agent_message": "Pricing keeps failing; giving up."
+    },
+    "state_before": {
+     "search_results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ],
+     "booking": null
+    },
+    "state_after": {
+     "search_results": [
+      {
+       "id": "F101",
+       "price": 5000,
+       "available": true
+      },
+      {
+       "id": "F202",
+       "price": 5900,
+       "available": true
+      },
+      {
+       "id": "F303",
+       "price": 7300,
+       "available": true
+      }
+     ],
+     "booking": null
+    },
+    "tool": null,
+    "model": "scripted-policy-v1",
+    "latency_ms": 83,
+    "tokens": null,
+    "status": "failure",
+    "error_type": "model_decision_failure",
+    "error_message": "agent ended without a valid booking",
+    "retry_count": 0,
+    "dependency_ids": [
+     "step-4"
+    ],
+    "checkpoint_id": null,
+    "created_at": "2026-10-03T16:46:44.657950Z"
+   }
+  ],
+  "graph": {
+   "nodes": [
+    {
+     "step_id": "step-1",
+     "step_index": 1,
+     "step_type": "tool_call",
+     "status": "success"
+    },
+    {
+     "step_id": "step-2",
+     "step_index": 2,
+     "step_type": "tool_call",
+     "status": "success"
+    },
+    {
+     "step_id": "step-3",
+     "step_index": 3,
+     "step_type": "tool_call",
+     "status": "failure"
+    },
+    {
+     "step_id": "step-4",
+     "step_index": 4,
+     "step_type": "tool_call",
+     "status": "failure"
+    },
+    {
+     "step_id": "step-5",
+     "step_index": 5,
+     "step_type": "final_answer",
+     "status": "failure"
+    }
+   ],
+   "edges": [
+    {
+     "from": "step-1",
+     "to": "step-2"
+    },
+    {
+     "from": "step-1",
+     "to": "step-3"
+    },
+    {
+     "from": "step-2",
+     "to": "step-3"
+    },
+    {
+     "from": "step-1",
+     "to": "step-4"
+    },
+    {
+     "from": "step-3",
+     "to": "step-4"
+    },
+    {
+     "from": "step-4",
+     "to": "step-5"
+    }
+   ],
+   "order": [
+    "step-1",
+    "step-2",
+    "step-3",
+    "step-4",
+    "step-5"
+   ]
+  }
+ },
+ "transcript": [
+  {
+   "role": "user",
+   "content": "Find the cheapest flight from Mumbai (BOM) to Delhi (DEL) on 2026-10-04 under 5600 INR for 1 passenger(s). Prepare the booking when done."
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Searching for flights."
+    },
+    {
+     "type": "tool_use",
+     "id": "toolu_scripted_1",
+     "name": "search_flights",
+     "input": {
+      "origin": "BOM",
+      "destination": "DEL",
+      "date": "2026-10-04"
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_scripted_1",
+     "content": "{\"results\": [{\"id\": \"F101\", \"price\": 5000, \"available\": true}, {\"id\": \"F202\", \"price\": 5900, \"available\": true}, {\"id\": \"F303\", \"price\": 7300, \"available\": true}]}"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Checking the cheapest option."
+    },
+    {
+     "type": "tool_use",
+     "id": "toolu_scripted_2",
+     "name": "check_availability",
+     "input": {
+      "flight_id": "F101"
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_scripted_2",
+     "content": "{\"flight_id\": \"F101\", \"available\": true, \"seats_left\": 4}"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Calculating the price."
+    },
+    {
+     "type": "tool_use",
+     "id": "toolu_scripted_3",
+     "name": "calculate_price",
+     "input": {
+      "flight_id": "F101",
+      "passengers": 1
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_scripted_3",
+     "content": "{\"error\": \"invalid_parameter\", \"message\": \"passengers must be an integer >= 1\"}",
+     "is_error": true
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Pricing failed; retrying."
+    },
+    {
+     "type": "tool_use",
+     "id": "toolu_scripted_4",
+     "name": "calculate_price",
+     "input": {
+      "flight_id": "F101",
+      "passengers": 1
+     }
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_scripted_4",
+     "content": "{\"error\": \"invalid_parameter\", \"message\": \"passengers must be an integer >= 1\"}",
+     "is_error": true
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Pricing keeps failing; giving up."
+    }
+   ]
+  }
+ ]
+}

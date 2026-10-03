@@ -1,0 +1,167 @@
+{
+ "4cfa3124-2557-4dbc-b5e2-778fb1ee7c6d": {
+  "run_id": "4cfa3124-2557-4dbc-b5e2-778fb1ee7c6d",
+  "scenario_id": "flight_basic",
+  "seed": 9549657,
+  "failure_type": null,
+  "target_step_id": null,
+  "fault_kind": null,
+  "fault_tool": null,
+  "fault_applied": false,
+  "outcome": "success"
+ },
+ "a89d25d0-750f-455b-ab21-474a07341596": {
+  "run_id": "a89d25d0-750f-455b-ab21-474a07341596",
+  "scenario_id": "flight_basic",
+  "seed": 4279349,
+  "failure_type": "faulty_tool:search_flights",
+  "target_step_id": "step-1",
+  "fault_kind": "faulty_tool",
+  "fault_tool": "search_flights",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "623c84bc-469d-4a43-b2d1-6a8207094365": {
+  "run_id": "623c84bc-469d-4a43-b2d1-6a8207094365",
+  "scenario_id": "flight_basic",
+  "seed": 8312022,
+  "failure_type": "faulty_parameter:search_flights",
+  "target_step_id": "step-1",
+  "fault_kind": "faulty_parameter",
+  "fault_tool": "search_flights",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "6b69a673-87ee-4055-b232-092ce1dd2d7f": {
+  "run_id": "6b69a673-87ee-4055-b232-092ce1dd2d7f",
+  "scenario_id": "flight_group",
+  "seed": 7922961,
+  "failure_type": "faulty_tool:check_availability",
+  "target_step_id": "step-2",
+  "fault_kind": "faulty_tool",
+  "fault_tool": "check_availability",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "fe83564e-aa2d-4b8d-853d-98496fc2c4aa": {
+  "run_id": "fe83564e-aa2d-4b8d-853d-98496fc2c4aa",
+  "scenario_id": "flight_tight_budget",
+  "seed": 6368887,
+  "failure_type": "faulty_parameter:check_availability",
+  "target_step_id": "step-2",
+  "fault_kind": "faulty_parameter",
+  "fault_tool": "check_availability",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "47de00e3-ad9c-425c-acff-f9079523e066": {
+  "run_id": "47de00e3-ad9c-425c-acff-f9079523e066",
+  "scenario_id": "flight_basic",
+  "seed": 1574703,
+  "failure_type": "faulty_tool:calculate_price",
+  "target_step_id": "step-3",
+  "fault_kind": "faulty_tool",
+  "fault_tool": "calculate_price",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "3b4d312c-1801-4a5b-b869-3a397f28d86d": {
+  "run_id": "3b4d312c-1801-4a5b-b869-3a397f28d86d",
+  "scenario_id": "flight_group",
+  "seed": 475592,
+  "failure_type": "faulty_parameter:calculate_price",
+  "target_step_id": "step-3",
+  "fault_kind": "faulty_parameter",
+  "fault_tool": "calculate_price",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "d480f6c2-e76e-45bd-9710-b9cac3651a44": {
+  "run_id": "d480f6c2-e76e-45bd-9710-b9cac3651a44",
+  "scenario_id": "flight_group",
+  "seed": 7260627,
+  "failure_type": "faulty_parameter:prepare_booking",
+  "target_step_id": "step-4",
+  "fault_kind": "faulty_parameter",
+  "fault_tool": "prepare_booking",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "2d52a0e7-d2c9-4ddd-9ce4-8e486d59edcb": {
+  "run_id": "2d52a0e7-d2c9-4ddd-9ce4-8e486d59edcb",
+  "scenario_id": "flight_tight_budget",
+  "seed": 35334,
+  "failure_type": null,
+  "target_step_id": null,
+  "fault_kind": null,
+  "fault_tool": null,
+  "fault_applied": false,
+  "outcome": "success"
+ },
+ "0b71164d-cd0f-4f02-a165-3526ad6eb7b4": {
+  "run_id": "0b71164d-cd0f-4f02-a165-3526ad6eb7b4",
+  "scenario_id": "flight_tight_budget",
+  "seed": 7472358,
+  "failure_type": "faulty_tool:search_flights",
+  "target_step_id": "step-1",
+  "fault_kind": "faulty_tool",
+  "fault_tool": "search_flights",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "a8021a2a-c24f-464d-925e-5fdcd2dae4c8": {
+  "run_id": "a8021a2a-c24f-464d-925e-5fdcd2dae4c8",
+  "scenario_id": "flight_group",
+  "seed": 3837994,
+  "failure_type": "faulty_parameter:search_flights",
+  "target_step_id": "step-1",
+  "fault_kind": "faulty_parameter",
+  "fault_tool": "search_flights",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "af8a2750-4049-4fac-bb19-b20d8e007d00": {
+  "run_id": "af8a2750-4049-4fac-bb19-b20d8e007d00",
+  "scenario_id": "flight_tight_budget",
+  "seed": 1715088,
+  "failure_type": "faulty_tool:check_availability",
+  "target_step_id": "step-2",
+  "fault_kind": "faulty_tool",
+  "fault_tool": "check_availability",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "60bec7ee-0d98-47ec-86ee-d287de9a8823": {
+  "run_id": "60bec7ee-0d98-47ec-86ee-d287de9a8823",
+  "scenario_id": "flight_group",
+  "seed": 513215,
+  "failure_type": "faulty_parameter:check_availability",
+  "target_step_id": "step-2",
+  "fault_kind": "faulty_parameter",
+  "fault_tool": "check_availability",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "0b751557-886e-4f9c-8360-62d10fc9bf5a": {
+  "run_id": "0b751557-886e-4f9c-8360-62d10fc9bf5a",
+  "scenario_id": "flight_basic",
+  "seed": 426911,
+  "failure_type": "faulty_tool:calculate_price",
+  "target_step_id": "step-3",
+  "fault_kind": "faulty_tool",
+  "fault_tool": "calculate_price",
+  "fault_applied": true,
+  "outcome": "failure"
+ },
+ "51a3f077-30ff-480a-aa85-9b68c3aef535": {
+  "run_id": "51a3f077-30ff-480a-aa85-9b68c3aef535",
+  "scenario_id": "flight_tight_budget",
+  "seed": 9083395,
+  "failure_type": "faulty_parameter:calculate_price",
+  "target_step_id": "step-3",
+  "fault_kind": "faulty_parameter",
+  "fault_tool": "calculate_price",
+  "fault_applied": true,
+  "outcome": "failure"
+ }
+}

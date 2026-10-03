@@ -16,14 +16,20 @@ SCENARIOS = {  # scenario_id -> (base max_price, passengers)
 def extract_journey(task: str, scenario_id: str = "flight_basic", seed: int = 42) -> dict:
     base, pax = SCENARIOS.get(scenario_id, SCENARIOS["flight_basic"])
     jitter = _rng(seed, "budget").randrange(0, 5) * 100
-    return {"from": "BOM", "to": "DEL", "date": "2026-10-04", "max_price": base + jitter, "passengers": pax}
+    origin = "DEL" if "Delhi" in task or "DEL" in task else "BOM"
+    destination = "BLR" if "Bengaluru" in task or "Bangalore" in task or "BLR" in task else ("DEL" if origin != "DEL" else "BOM")
+    if scenario_id == "flight_basic" and "Bengaluru" not in task and "BLR" not in task and "Delhi to" not in task:
+        origin, destination = "BOM", "DEL"
+    return {"from": origin, "to": destination, "date": "2026-10-04", "max_price": base + jitter, "passengers": pax}
 
 def search_flights(query: dict, seed: int) -> dict:
     base = 4800 + _rng(seed, "search").randrange(0, 4) * 100
+    q_from = query.get("from", "BOM")
+    q_to = query.get("to", "DEL")
     return {"tool": "search_flights", "query": query, "results": [
-        {"id": "F101", "price": base + 200, "available": True},
-        {"id": "F202", "price": base + 1100, "available": True},
-        {"id": "F303", "price": base + 2500, "available": True}]}
+        {"id": "F101", "origin": q_from, "destination": q_to, "price": base + 200, "available": True},
+        {"id": "F202", "origin": q_from, "destination": q_to, "price": base + 1100, "available": True},
+        {"id": "F303", "origin": q_from, "destination": q_to, "price": base + 2500, "available": True}]}
 
 def filter_flights(results: list, max_price: int) -> list:
     return [f for f in results if f["price"] <= max_price]
@@ -36,4 +42,11 @@ def calculate_price(flight: dict, passengers: int) -> dict:
     return {"base": flight["price"], "taxes": taxes, "total": flight["price"] * passengers + taxes}
 
 def prepare_booking_payload(flight: dict, price: dict) -> dict:
-    return {"mock": True, "flight_id": flight["id"], "total": price["total"], "status": "ready_to_book"}
+    return {
+        "mock": True,
+        "flight_id": flight["id"],
+        "origin": flight.get("origin", "BOM"),
+        "destination": flight.get("destination", "DEL"),
+        "total": price["total"],
+        "status": "ready_to_book"
+    }
