@@ -138,13 +138,6 @@ export default function App() {
   const [demoActive, setDemoActive] = useState(true)
   const [demoScenario, setDemoScenario] = useState('calculation_error')
   const [demoStep, setDemoStep] = useState(1)
-  const [theme, setTheme] = useState('dark')
-
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark'
-    setTheme(next)
-    document.documentElement.dataset.theme = next
-  }
 
   const onSelectScenario = scId => {
     setDemoScenario(scId)
@@ -318,20 +311,21 @@ export default function App() {
       <a className="skip" href="#main">Skip to content</a>
       <div className="sr-only" role="status" aria-live="polite">{msg}</div>
       <header>
-        <div className="brand"><div className="mark"><Icon n="diamond" /></div>Black Box</div>
+        <div className="brand">
+          <div className="mark"><Icon n="terminal" /></div>
+          <span className="brand-name mono">BLACK_BOX</span>
+          <span className="brand-tag mono">FLIGHT_RECORDER</span>
+        </div>
         <div className="btn-group">
           <button
-            className={`btn sm ${demoActive ? 'pri' : 'sec'}`}
+            className={`btn sm ${demoActive ? 'pri' : 'sec'} mono`}
             onClick={() => setDemoActive(!demoActive)}
-            title="Toggle Guided Demo Mode"
+            title="Toggle Demo Mode"
           >
-            <Icon n="play_circle" /> {demoActive ? 'Demo Mode: ON' : 'Demo Mode'}
+            {demoActive ? '● DEMO ACTIVE' : '○ DEMO MODE'}
           </button>
-          <button className="btn sec sm" onClick={toggleTheme} title="Toggle Dark/Light Mode">
-            <Icon n={theme === 'dark' ? 'light_mode' : 'dark_mode'} />
-          </button>
-          <button className="btn sec sm" onClick={startTour}><Icon n="slideshow" /> Tour</button>
-          <span className="pill"><Icon n="science" /> {live ? 'Live API' : 'Sample data'}</span>
+          <button className="btn sec sm mono" onClick={startTour}><Icon n="explore" /> TOUR</button>
+          <span className="pill mono"><span className={`dot ${live ? 'ok' : 'wn'}`} /> {live ? 'LIVE API' : 'SAMPLE'}</span>
         </div>
       </header>
 
