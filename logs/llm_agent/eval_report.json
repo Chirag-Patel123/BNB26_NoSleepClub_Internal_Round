@@ -1,0 +1,69 @@
+{
+ "analysis_client": "heuristic-baseline",
+ "model": "rules-v1",
+ "n_logs": 15,
+ "n_train": 10,
+ "n_test": 5,
+ "n_test_faulty": 3,
+ "top1_origin_accuracy": 1.0,
+ "naive_first_failure_accuracy": 0.6666666666666666,
+ "healthy_false_alarms": 0,
+ "grounded_evidence_rate": 1.0,
+ "rows": [
+  {
+   "run_id": "2d52a0e7-d2c9-4ddd-9ce4-8e486d59edcb",
+   "truth": "none",
+   "fault": "healthy",
+   "predicted": "none",
+   "first_failure_baseline": "none",
+   "grounded_evidence": [
+    0,
+    0
+   ]
+  },
+  {
+   "run_id": "4cfa3124-2557-4dbc-b5e2-778fb1ee7c6d",
+   "truth": "none",
+   "fault": "healthy",
+   "predicted": "none",
+   "first_failure_baseline": "none",
+   "grounded_evidence": [
+    0,
+    0
+   ]
+  },
+  {
+   "run_id": "623c84bc-469d-4a43-b2d1-6a8207094365",
+   "truth": "step-1",
+   "fault": "faulty_parameter:search_flights",
+   "predicted": "step-1",
+   "first_failure_baseline": "step-1",
+   "grounded_evidence": [
+    1,
+    1
+   ]
+  },
+  {
+   "run_id": "a89d25d0-750f-455b-ab21-474a07341596",
+   "truth": "step-1",
+   "fault": "faulty_tool:search_flights",
+   "predicted": "step-1",
+   "first_failure_baseline": "step-2",
+   "grounded_evidence": [
+    1,
+    1
+   ]
+  },
+  {
+   "run_id": "fe83564e-aa2d-4b8d-853d-98496fc2c4aa",
+   "truth": "step-2",
+   "fault": "faulty_parameter:check_availability",
+   "predicted": "step-2",
+   "first_failure_baseline": "step-2",
+   "grounded_evidence": [
+    1,
+    1
+   ]
+  }
+ ]
+}
