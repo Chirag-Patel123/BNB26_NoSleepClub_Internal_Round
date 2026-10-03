@@ -1,0 +1,44 @@
+[
+  {
+    "file": "success_seed42.json",
+    "run_id": "ef84ccf1-01f0-4bda-a14b-bad639ca1684",
+    "status": "success",
+    "injected_target": null,
+    "first_visible_failure": null
+  },
+  {
+    "file": "stale_search_result_seed42.json",
+    "run_id": "415f1af4-7681-433a-8542-4af27447bcb1",
+    "status": "failure",
+    "injected_target": "step-3",
+    "first_visible_failure": "step-5"
+  },
+  {
+    "file": "incorrect_filtering_seed42.json",
+    "run_id": "a6eb5e2e-a52c-4810-833f-4c3d26aa5fbf",
+    "status": "failure",
+    "injected_target": "step-4",
+    "first_visible_failure": "step-5"
+  },
+  {
+    "file": "invalid_tool_output_seed42.json",
+    "run_id": "c883eecc-3cdc-4790-a5dd-e31168653355",
+    "status": "failure",
+    "injected_target": "step-5",
+    "first_visible_failure": "step-5"
+  },
+  {
+    "file": "calculation_error_seed42.json",
+    "run_id": "9fe489cc-911e-4b41-ad05-3a01608ad843",
+    "status": "failure",
+    "injected_target": "step-6",
+    "first_visible_failure": "step-7"
+  },
+  {
+    "file": "wrong_parameter_seed42.json",
+    "run_id": "cbc35edb-cd64-40cf-9d03-42ca02be672b",
+    "status": "failure",
+    "injected_target": "step-3",
+    "first_visible_failure": "step-4"
+  }
+]
