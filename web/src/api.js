@@ -54,9 +54,13 @@ export async function fetchSummaryApi(id) {
 
 // Optional: if the backend can generalize across stored logs (e.g. with an LLM), the UI shows that text instead.
 export async function fetchLogsSummaryApi() {
-  const res = await fetch(`${BASE_URL}/logs/summary`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
+  try {
+    const res = await fetch(`${BASE_URL}/logs/summary`)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
 }
 
 export async function startNewRun({ scenario_id, failure_type, target_step, seed }) {

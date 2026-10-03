@@ -3,6 +3,7 @@ import { seed, replayRun, mk } from './data.js'
 import { Icon } from './ui.jsx'
 import DemoController, { DEMO_SCENARIOS, DEMO_STEPS } from './DemoController.jsx'
 import { Overview, Logs, Investigate, Replay, Compare, Evaluation } from './pages.jsx'
+import { NotFound } from './NotFound.jsx'
 import {
   fetchRecentRuns,
   fetchRun,
@@ -390,9 +391,21 @@ export default function App() {
     : null
 
   // Move focus to the new page title when the page changes (keyboard / screen-reader users).
+  const PAGE_DESCRIPTIONS = {
+    Overview: 'System Overview: Real-time autonomous AI agent execution telemetry and fault detection.',
+    Logs: 'Trace Logs: Aggregated failure patterns, latency metrics, and execution history across runs.',
+    Investigate: 'Causal Investigation: Interactive execution graphs and trace-grounded suspicion ranking.',
+    Replay: 'Checkpointed Replay: Branch counterfactual fixes from saved checkpoints with prefix caching.',
+    Compare: 'Differential Analysis: Side-by-side execution trace diffing between original and alternative runs.',
+    Evaluation: 'Benchmark Evaluation: Empirical diagnostic accuracy metrics across seen and holdout distributions.'
+  }
+
   useEffect(() => {
-    if (first.current) { first.current = false; return }
-    document.title = `${page} — Black Box`
+    document.title = `${page} — Black Box AI Flight Recorder`
+    const metaDesc = document.querySelector('meta[name="description"]')
+    if (metaDesc && PAGE_DESCRIPTIONS[page]) {
+      metaDesc.setAttribute('content', PAGE_DESCRIPTIONS[page])
+    }
     document.querySelector('main h1')?.focus({ preventScroll: true })
     window.scrollTo(0, 0)
   }, [page])
@@ -563,6 +576,17 @@ export default function App() {
         ))}
       </nav>
       <main id="main" tabIndex={-1}>
+        <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--mu)', margin: '0 0 16px 0', padding: '2px 0' }}>
+          <a href="#Overview" onClick={(e) => { e.preventDefault(); setPage('Overview'); }} style={{ color: 'var(--ac)', textDecoration: 'none', fontWeight: 600 }}>Home</a>
+          <span style={{ opacity: 0.5 }}>/</span>
+          <a href={`#${page}`} onClick={(e) => { e.preventDefault(); setPage(page); }} style={{ color: page === 'Overview' && !rid ? 'var(--fg)' : 'var(--mu)', textDecoration: 'none' }}>{page}</a>
+          {page === 'Investigate' && rid && (
+            <>
+              <span style={{ opacity: 0.5 }}>/</span>
+              <span style={{ color: 'var(--fg)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{rid}</span>
+            </>
+          )}
+        </nav>
         {page === 'Overview' && (
           <Overview
             runs={runs}
@@ -632,6 +656,9 @@ export default function App() {
         )}
         {page === 'Evaluation' && <Evaluation />}
         {msg && <div className="toast" aria-hidden="true">{msg}</div>}
+        {!['Overview', 'Logs', 'Investigate', 'Replay', 'Compare', 'Evaluation'].includes(page) && (
+          <NotFound onGoHome={() => setPage('Overview')} />
+        )}
       </main>
 
       {tour != null && (

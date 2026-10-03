@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://bnb-26-no-sleep-club-internal-round.vercel.app/sitemap.xml

@@ -1,0 +1,13 @@
+# Black Box — Autonomous AI Agent Flight Recorder & Causal Debugger
+
+An observability and causal debugging platform for autonomous agents. Captures deterministic execution traces, isolates faulty upstream steps via ML classifiers, and allows counterfactual replays.
+
+## Endpoints
+- GET /health: Health status and database engine
+- GET /runs/recent: Recent recorded traces
+- GET /runs/{run_id}: Full execution graph and steps
+- GET /runs/{run_id}/diagnosis: Model-ranked failure causes
+- POST /runs: Start execution trace
+- POST /runs/{run_id}/replay: Checkpointed counterfactual replay
+- GET /runs/compare: Diff two traces
+- GET /evaluation: Diagnostic accuracy metrics
