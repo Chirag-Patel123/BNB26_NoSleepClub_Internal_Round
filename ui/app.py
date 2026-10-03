@@ -147,7 +147,7 @@ st.markdown("""
     }
 
     /* Inputs */
-    .stTextInput input, .stSelectbox > div > div > div {
+    .stTextInput input, .stTextArea textarea {
         background-color: rgba(0, 0, 0, 0.3) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
         color: #fff !important;
@@ -156,7 +156,15 @@ st.markdown("""
         font-size: 1.1rem !important;
         transition: all 0.3s ease !important;
     }
-    .stTextInput input:focus {
+    .stSelectbox > div > div > div {
+        background-color: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        color: #fff !important;
+        border-radius: 12px !important;
+        min-height: 50px !important;
+        font-size: 1.1rem !important;
+    }
+    .stTextInput input:focus, .stTextArea textarea:focus {
         border-color: #0ea5e9 !important;
         box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important;
     }
