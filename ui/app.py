@@ -209,6 +209,14 @@ st.markdown("""
 if 'page' not in st.session_state:
     st.session_state.page = "Dashboard"
 
+# --- Massive Project Title ---
+st.markdown("""
+<div style="text-align:center; margin-top: 10px; margin-bottom: 30px; animation: slideUpFade 0.8s forwards;">
+    <h1 style="font-size: 6rem; font-weight: 900; letter-spacing: 0.15em; background: linear-gradient(90deg, #0ea5e9, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 10px 40px rgba(14, 165, 233, 0.4); margin: 0; font-family: 'Inter', sans-serif;">BLACK BOX</h1>
+    <p style="color:#64748b; font-size: 1.2rem; letter-spacing: 0.4em; margin: 0; text-transform: uppercase; font-weight: 600;">Autonomous Agent Diagnostics</p>
+</div>
+""", unsafe_allow_html=True)
+
 # --- Custom Top Navigation ---
 st.markdown('<div class="nav-container">', unsafe_allow_html=True)
 nav_cols = st.columns(5)
