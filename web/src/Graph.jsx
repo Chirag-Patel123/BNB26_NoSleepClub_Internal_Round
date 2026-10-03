@@ -11,10 +11,14 @@ export default function Graph({ run: r, sel, onSelect, dim, hl }) {
       <div className="scroll">
         <svg className="g" viewBox="0 0 880 170" style={{ minWidth: 680, width: '100%', height: 'auto' }}
           role={onSelect ? 'group' : 'img'} aria-label={`Execution graph of ${r.id}. Steps are also listed below.`}>
-          <text x="2" y="54">tools</text><text x="2" y="108">model</text>
+          {/* Lane guides & clear non-overlapping labels */}
+          <line x1="58" y1="50" x2="840" y2="50" stroke="var(--ln)" strokeWidth="1" strokeDasharray="3 3" opacity="0.35" />
+          <line x1="58" y1="104" x2="840" y2="104" stroke="var(--ln)" strokeWidth="1" strokeDasharray="3 3" opacity="0.35" />
+          <text x="14" y="50" dominantBaseline="middle" style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, fill: 'var(--mu)', opacity: 0.85 }}>tools</text>
+          <text x="14" y="104" dominantBaseline="middle" style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, fill: 'var(--mu)', opacity: 0.85 }}>model</text>
           {r.steps.slice(0, 7).map((_, i) => {
             const bad = !r.ok && i >= r.culprit
-            return <path key={i} d={`M${X(i)} ${Y(i)}C${X(i)+52} ${Y(i)} ${X(i+1)-52} ${Y(i+1)} ${X(i+1)} ${Y(i+1)}`} fill="none"
+            return <path key={i} d={`M${X(i)} ${Y(i)}C${X(i)+50} ${Y(i)} ${X(i+1)-50} ${Y(i+1)} ${X(i+1)} ${Y(i+1)}`} fill="none"
               stroke={bad ? 'var(--bad)' : 'var(--mu)'} strokeWidth="2" strokeDasharray={bad ? '5 4' : undefined} opacity=".7" />
           })}
           {dx != null && <><line x1={dx} x2={dx} y1="14" y2="150" stroke="var(--wn)" strokeWidth="2" strokeDasharray="4 4" /><text x={dx + 6} y="24" style={{ fill: 'var(--wn)' }}>diverges · earlier steps cached</text></>}
