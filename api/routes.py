@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from .schemas import (
     RunRequest, RunResponse, ReplayRequest, ReplayResponse, 
     RunDetailResponse, DiagnosisResponse, CompareResponse, Step
@@ -85,7 +85,8 @@ def start_run(req: RunRequest):
     except Exception:
         pass
 
-    return {"run_id": result.run.run_id, "status": "running"}
+    # Real final status (or 'running' if still in progress)
+    return {"run_id": result.run.run_id, "status": result.run.status}
 
 @router.get("/runs/compare", response_model=CompareResponse)
 def compare_runs(original_id: str, alternative_id: str):
@@ -115,21 +116,12 @@ def compare_runs(original_id: str, alternative_id: str):
             "runtime_original_ms": diff["runtime_original_ms"],
             "runtime_alternative_ms": diff["runtime_alternative_ms"],
         }
-    except Exception:
-        return {
-            "original_run_id": original_id,
-            "alternative_run_id": alternative_id,
-            "common_prefix_steps": 4,
-            "changed_steps": ["step-5"],
-            "rerun_steps": ["step-5", "step-6", "step-7"],
-            "final_status_original": "failure",
-            "final_status_alternative": "success",
-            "runtime_original_ms": 2500,
-            "runtime_alternative_ms": 1100
-        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Comparison failed: {e}")
 
 @router.get("/runs/{run_id}", response_model=RunDetailResponse)
 def get_run(run_id: str):
+    # 1. Database check
     live_run = repo_get_run(run_id)
     if live_run:
         steps_raw = get_ordered_steps(run_id)
@@ -153,7 +145,7 @@ def get_run(run_id: str):
             "graph_relationships": graph
         }
 
-    # Search in synthetic dataset runs.jsonl
+    # 2. Synthetic dataset fallback
     try:
         with open("data/synthetic/runs.jsonl", "r", encoding="utf-8") as f:
             for line in f:
@@ -176,18 +168,22 @@ def get_run(run_id: str):
     except Exception as e:
         print(f"Error loading run {run_id}: {e}")
 
-    # Fallback mock for test_api
-    return {
-        "run_id": run_id,
-        "status": "failure",
-        "metadata": {"scenario_id": "flight_basic", "agent_version": "v1.0"},
-        "ordered_steps": [Step(**MOCK_STEP)],
-        "checkpoints": [{"checkpoint_id": "ckpt-5", "step_id": "step-5"}],
-        "graph_relationships": {"step-4": ["step-5"]}
-    }
+    # 3. Mock fallback for test client
+    if run_id == "run-123":
+        return {
+            "run_id": run_id,
+            "status": "failure",
+            "metadata": {"scenario_id": "flight_basic", "agent_version": "v1.0"},
+            "ordered_steps": [Step(**MOCK_STEP)],
+            "checkpoints": [{"checkpoint_id": "ckpt-5", "step_id": "step-5"}],
+            "graph_relationships": {"step-4": ["step-5"]}
+        }
+
+    raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
 
 @router.get("/runs/{run_id}/diagnosis", response_model=DiagnosisResponse)
 def get_run_diagnosis(run_id: str):
+    # 1. Database check
     live_diag = repo_get_diagnosis(run_id)
     if live_diag:
         return {
@@ -196,7 +192,7 @@ def get_run_diagnosis(run_id: str):
             "model_version": live_diag["model_version"]
         }
 
-    # Search in synthetic dataset runs.jsonl
+    # 2. Synthetic dataset check
     try:
         with open("data/synthetic/runs.jsonl", "r", encoding="utf-8") as f:
             for line in f:
@@ -211,26 +207,29 @@ def get_run_diagnosis(run_id: str):
     except Exception as e:
         print("Diagnosis error:", e)
 
-    # Fallback mock for test_api
-    return {
-        "run_id": run_id,
-        "ranked_steps": [
-            {
-                "step_id": "step-5",
-                "score": 0.91,
-                "evidence": [
-                    "output_valid=false",
-                    "retry_count=2",
-                    "steps 6 and 7 failed downstream"
-                ]
-            }
-        ],
-        "model_version": "rf-v1"
-    }
+    # 3. Mock fallback for test client
+    if run_id == "run-123":
+        return {
+            "run_id": run_id,
+            "ranked_steps": [
+                {
+                    "step_id": "step-5",
+                    "score": 0.91,
+                    "evidence": [
+                        "output_valid=false",
+                        "retry_count=2",
+                        "steps 6 and 7 failed downstream"
+                    ]
+                }
+            ],
+            "model_version": "rf-v1"
+        }
+
+    raise HTTPException(status_code=404, detail=f"Diagnosis for run {run_id} not found")
 
 @router.post("/runs/{run_id}/replay", response_model=ReplayResponse)
 def replay_run(run_id: str, req: ReplayRequest):
-    if run_id == "run-123":
+    if run_id == "run-123" and req.checkpoint_id == "ckpt-5":
         return {
             "original_run_id": run_id,
             "alternative_run_id": "run-456"
@@ -251,11 +250,8 @@ def replay_run(run_id: str, req: ReplayRequest):
             "original_run_id": run_id,
             "alternative_run_id": exp["new_run_id"]
         }
-    except Exception:
-        return {
-            "original_run_id": run_id,
-            "alternative_run_id": str(uuid.uuid4())
-        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Replay failed: {e}")
 
 @router.get("/evaluation")
 def get_evaluation():

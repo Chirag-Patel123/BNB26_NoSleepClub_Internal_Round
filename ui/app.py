@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import json
 import pandas as pd
 import plotly.express as px
 import numpy as np
@@ -144,6 +145,16 @@ def fetch_api(endpoint):
         st.warning(f"Failed to connect to API: {e} (Is the backend running?)")
     return None
 
+def post_api(endpoint, payload):
+    try:
+        res = requests.post(f"{API_URL}{endpoint}", json=payload)
+        if res.status_code == 200:
+            return res.json()
+        st.error(f"Error {res.status_code}: {res.text}")
+    except Exception as e:
+        st.warning(f"Failed to connect to API: {e} (Is the backend running?)")
+    return None
+
 if page == "🎛️ Dashboard":
     st.title("🎛️ System Dashboard")
     
@@ -252,21 +263,72 @@ elif page == "🔬 Replay Lab":
     st.title("🔬 Replay Lab")
     st.markdown("Modify state from a known checkpoint and run counterfactuals.")
     
-    with st.form("replay_form"):
-        st.selectbox("Select Checkpoint", ["ckpt-5 (Step 5 - validate_availability)", "ckpt-4 (Step 4)"])
-        st.selectbox("Modification Type", ["change_tool_result", "change_parameter", "change_branch"])
-        st.text_area("Modification Payload (JSON)", value='{\n  "step_id": "step-5",\n  "value": {"available": true}\n}')
+    default_run_id = st.session_state.get("selected_run_id", "run-123")
+    parent_run_id = st.text_input("Parent Run ID", value=default_run_id)
+    
+    run_meta = fetch_api(f"/runs/{parent_run_id}") if parent_run_id else None
+    
+    ckpt_options = []
+    if run_meta and run_meta.get("checkpoints"):
+        ckpt_options = [c["checkpoint_id"] for c in run_meta["checkpoints"]]
+    if not ckpt_options:
+        ckpt_options = ["ckpt-5", "ckpt-4", "ckpt-3", "ckpt-2", "ckpt-1"]
         
-        if st.form_submit_button("Run Counterfactual", type="primary"):
-            st.success("Counterfactual run started. Generated new Run ID: run-456")
+    step_options = []
+    if run_meta and run_meta.get("ordered_steps"):
+        step_options = [s["step_id"] for s in run_meta["ordered_steps"]]
+    if not step_options:
+        step_options = ["step-5", "step-4", "step-3", "step-2", "step-1"]
+
+    with st.form("replay_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            selected_ckpt = st.selectbox("Select Checkpoint", ckpt_options)
+            selected_step = st.selectbox("Target Modified Step", step_options)
+        with col2:
+            mod_type = st.selectbox("Modification Type", ["change_tool_result", "change_parameter", "change_branch_choice"])
+
+        default_payload = '{\n  "results": [\n    {"flight_id": "F101", "price": 450, "seats_left": 5}\n  ]\n}' if selected_step == "step-3" else '{\n  "available": true,\n  "seats_left": 5\n}'
+        payload_str = st.text_area("Modification Value (JSON)", value=default_payload, height=120)
+        
+        submitted = st.form_submit_button("Run Counterfactual", type="primary")
+        
+        if submitted:
+            try:
+                val = json.loads(payload_str)
+                req_body = {
+                    "parent_run_id": parent_run_id,
+                    "checkpoint_id": selected_ckpt,
+                    "modification_type": mod_type,
+                    "modification_payload": {
+                        "step_id": selected_step,
+                        "value": val
+                    }
+                }
+                res = post_api(f"/runs/{parent_run_id}/replay", req_body)
+                if res and "alternative_run_id" in res:
+                    new_id = res["alternative_run_id"]
+                    st.success(f"Counterfactual replay executed! Generated Alternative Run ID: `{new_id}`")
+                    st.session_state["last_replay_orig"] = parent_run_id
+                    st.session_state["last_replay_alt"] = new_id
+                    
+                    alt_data = fetch_api(f"/runs/{new_id}")
+                    if alt_data:
+                        st.info(f"Alternative Run Status: **{alt_data.get('status', '').upper()}**")
+                elif res:
+                    st.warning(f"Replay response: {res}")
+            except Exception as e:
+                st.error(f"Invalid JSON payload: {e}")
 
 elif page == "⚖️ Comparison":
     st.title("⚖️ Trace Comparison")
     st.markdown("Compare the original failure against the counterfactual replay.")
     
     cols = st.columns([1, 1, 1])
-    orig_id = cols[0].text_input("Original Run", "run-123")
-    alt_id = cols[1].text_input("Alternative Run", "run-456")
+    default_orig = st.session_state.get("last_replay_orig", "run-123")
+    default_alt = st.session_state.get("last_replay_alt", "run-456")
+    orig_id = cols[0].text_input("Original Run", default_orig)
+    alt_id = cols[1].text_input("Alternative Run", default_alt)
     st.write("")
     if cols[2].button("Compare", type="primary", use_container_width=True):
         data = fetch_api(f"/runs/compare?original_id={orig_id}&alternative_id={alt_id}")
@@ -276,11 +338,18 @@ elif page == "⚖️ Comparison":
             metric_cols[0].metric("Common Prefix Steps", data.get("common_prefix_steps"))
             metric_cols[1].metric("Changed Steps", len(data.get("changed_steps", [])))
             metric_cols[2].metric("Rerun Steps", len(data.get("rerun_steps", [])))
-            metric_cols[3].metric("Runtime Savings", f"{data.get('runtime_original_ms', 0) - data.get('runtime_alternative_ms', 0)}ms")
+            runtime_orig = data.get('runtime_original_ms', 0)
+            runtime_alt = data.get('runtime_alternative_ms', 0)
+            savings = data.get('runtime_savings_ms', runtime_orig - runtime_alt)
+            metric_cols[3].metric("Runtime Savings", f"{savings}ms")
             
             st.markdown("### Outcome")
             st.write(f"Original Status: **{data.get('final_status_original', '').upper()}**")
             st.write(f"Counterfactual Status: **{data.get('final_status_alternative', '').upper()}**")
+            if data.get("changed_steps"):
+                st.markdown(f"**Changed Step IDs:** `{', '.join(data.get('changed_steps', []))}`")
+            if data.get("rerun_steps"):
+                st.markdown(f"**Rerun Step IDs:** `{', '.join(data.get('rerun_steps', []))}`")
 
 elif page == "📊 Evaluation":
     st.title("📊 Evaluation Metrics")

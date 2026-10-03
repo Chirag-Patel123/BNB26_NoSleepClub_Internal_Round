@@ -12,7 +12,8 @@ def test_start_run():
     })
     assert response.status_code == 200
     assert "run_id" in response.json()
-    assert response.json()["status"] == "running"
+    assert response.json()["status"] in ["running", "failure", "success"]
+    assert response.json()["status"] == "failure"
 
 def test_get_run():
     response = client.get("/runs/run-123")

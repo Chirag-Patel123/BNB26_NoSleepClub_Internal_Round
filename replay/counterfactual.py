@@ -101,7 +101,7 @@ def run_counterfactual(
         resume_from=ckpt,
         parent_run_id=parent_run_id,
         override=override,
-        use_checkpoint_failure=False,  # override wins and overrides inherited failure
+        use_checkpoint_failure=True,  # Override wins on target step; failure remains active for unrelated edits
     )
 
     new_run_id = new_result.run.run_id
