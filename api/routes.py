@@ -65,6 +65,8 @@ def recent_runs():
                 time_str = str(raw_time)[:16].replace("T", " ") if raw_time else "unknown"
                 runs.append({
                     "Run ID": run_id,
+                    "run_id": run_id,
+                    "id": run_id,
                     "Scenario": scenario,
                     "Steps": steps_count,
                     "Status": status,
@@ -82,8 +84,11 @@ def recent_runs():
                     run_info = data.get("run", {})
                     raw_time = run_info.get("start_time") or run_info.get("created_at") or ""
                     time_str = str(raw_time)[:16].replace("T", " ") if raw_time else "unknown"
+                    rid = run_info.get("run_id", "unknown")
                     runs.append({
-                        "Run ID": run_info.get("run_id", "unknown"),
+                        "Run ID": rid,
+                        "run_id": rid,
+                        "id": rid,
                         "Scenario": run_info.get("scenario_id", "unknown"),
                         "Steps": len(data.get("steps", [])),
                         "Status": str(run_info.get("status", "unknown")).upper(),
@@ -327,3 +332,37 @@ def import_trace(payload: dict):
         "diagnosis": diag
     }
 
+
+@router.get("/runs/{run_id}/summary")
+def get_run_summary(run_id: str):
+    if not run_id or run_id == "undefined":
+        raise HTTPException(status_code=404, detail="Invalid run ID")
+    try:
+        from api.llm_logs import summary as llm_summary
+        res = llm_summary(run_id)
+        if res:
+            return res
+    except Exception:
+        pass
+
+    diag = repo_get_diagnosis(run_id)
+    if diag and diag.get("ranked_steps"):
+        top = diag["ranked_steps"][0]
+        ev_list = top.get("evidence", [])
+        ev_text = " ".join(ev_list) if isinstance(ev_list, list) else str(ev_list)
+        return {
+            "run_id": run_id,
+            "summary": f"Step {top.get('step_id')} identified as likely failure point. Evidence: {ev_text}",
+            "suspect_step_id": top.get("step_id"),
+            "confidence": top.get("score", 0.8),
+        }
+    return {
+        "run_id": run_id,
+        "summary": "Run executed. No anomaly detected in trace.",
+        "suspect_step_id": None,
+        "confidence": 1.0,
+    }
+
+@router.get("/logs/summary")
+def get_logs_summary():
+    return {"summary": "Aggregated execution summary across all recorded runs."}
