@@ -1,13 +1,39 @@
-# Black Box - A Flight Recorder for AI Agents (NoSleepClub)
-Observe -> Diagnose -> Explain -> Replay -> Modify -> Compare -> Evaluate.
+# Black Box - A Flight Recorder for AI Agents
 
-## Clean-start setup
-1. `python -m venv .venv && .venv\Scripts\activate`
-2. `pip install -r requirements.txt`
-3. Copy `.env.example` to `.env` and fill in Supabase values.
-4. Run `storage/schema.sql` in the Supabase SQL editor.
-5. `pytest -q`
-6. API: `uvicorn api.main:app --reload`  |  UI: `streamlit run ui/app.py`
+Welcome to the **Black Box** project repo! This repository contains the source code for our AI-powered debugging system that learns from agent execution traces to identify suspicious or failure-causing steps, provides trace-grounded evidence, supports checkpointed replay, supports alternative execution paths, compares executions, and reports measured evaluation results.
 
-## Layout
-agent/ + tracing/ (P1) | ml/ (P2) | storage/ + replay/ (P3) | api/ + ui/ + docs/ (P4). See CONTRACTS.md.
+## Clean-Start Setup
+
+1. **Clone the repo:**
+   ```bash
+   git clone https://github.com/Chirag-Patel123/BNB26_NoSleepClub_Internal_Round.git
+   cd BNB26_NoSleepClub_Internal_Round
+   ```
+2. **Setup Virtual Environment:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+3. **Environment setup:**
+   Copy `.env.example` to `.env` and fill in your Supabase credentials:
+   ```bash
+   cp .env.example .env
+   ```
+4. **Database Setup:**
+   Execute `storage/schema.sql` against your Supabase instance to create the required tables.
+5. **Run the API & UI:**
+   Start the backend FastAPI server:
+   ```bash
+   python main.py
+   ```
+   In a new terminal, start the Streamlit Dashboard:
+   ```bash
+   streamlit run ui/app.py
+   ```
+
+## Roles
+- **P1 Ishan**: Agent execution and tracing (`agent/`, `tracing/`)
+- **P2 Rudra**: ML diagnosis and evaluation (`ml/`, `data/benchmark/`)
+- **P3 Chirag**: Supabase storage and replay (`storage/`, `replay/`)
+- **P4 Madhav**: API, UI, Integration, and Demo (`api/`, `ui/`, Docs)
