@@ -347,23 +347,29 @@ export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRu
         </>
       )}
 
-      <div className="card" style={{ marginTop: 'var(--gap)' }}>
+      <div className="card" style={{ marginTop: 'var(--gap)', padding: '20px 22px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-          <h2 style={{ margin: 0 }}><Icon n="auto_awesome" /> AI diagnosis summary</h2>
+          <h2 style={{ margin: 0, fontSize: '17px' }}><Icon n="auto_awesome" /> AI diagnosis summary</h2>
           <div className="btn-group">
             {sum.conf && <span className={'pill ' + sum.conf[1]}>{sum.conf[0]} confidence · {(sum.score * 100).toFixed(0)}%</span>}
             <span className="pill mu">{ai ? 'written by backend AI' : 'generated from trace'}</span>
           </div>
         </div>
-        <p style={{ margin: '10px 0 4px', fontWeight: 700 }}>{sum.headline}</p>
-        <p className="mu" style={{ margin: '0 0 6px' }}>{ai || sum.body}</p>
+        <p style={{ margin: '14px 0 8px', fontWeight: 700, fontSize: '19px', color: '#ffffff', lineHeight: 1.35 }}>{sum.headline}</p>
+        <p style={{ margin: '0 0 14px', fontSize: '15.5px', lineHeight: 1.65, color: '#d4d4d8' }}>{ai || sum.body}</p>
         {sum.fix && (
           <>
-            <Calls color="var(--ok)"><Icon n="lightbulb" /> <b>Suggested next step:</b> {sum.fix}</Calls>
-            <div style={{ marginTop: 10 }}><button className="btn pri sm" onClick={() => onReplay(r.id, sum.i)}><Icon n="history" /> Try it in Replay</button></div>
+            <div className="call" style={{ borderColor: 'var(--ok-border)', background: 'var(--ok-bg)', fontSize: '14.5px', lineHeight: 1.55, padding: '12px 14px' }}>
+              <Icon n="lightbulb" /> <b>Suggested next step:</b> {sum.fix}
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button className="btn pri" style={{ padding: '8px 14px', fontSize: '13px' }} onClick={() => onReplay(r.id, sum.i)}>
+                <Icon n="history" /> Try it in Replay
+              </button>
+            </div>
           </>
         )}
-        {!r.ok && <p className="mu" style={{ margin: '10px 0 0' }}>A ranking signal, not proof. Confirm by replaying from the suspect step.</p>}
+        {!r.ok && <p className="mu" style={{ margin: '12px 0 0', fontSize: '13px' }}>A ranking signal, not proof. Confirm by replaying from the suspect step.</p>}
       </div>
 
       <div className="card" style={{ margin: 'var(--gap) 0' }}>
