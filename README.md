@@ -2,6 +2,12 @@
 
 > **Autonomous Agent Observability, Failure Localization, and Checkpointed Replay Engine**
 
+### 🌐 Live Deployments
+- **🚀 Web UI (Vercel)**: [https://bnb-26-no-sleep-club-internal-round.vercel.app/](https://bnb-26-no-sleep-club-internal-round.vercel.app/)
+- **⚡ Backend API (Railway)**: [https://bnb26nosleepclubinternalround-production.up.railway.app/](https://bnb26nosleepclubinternalround-production.up.railway.app/)
+- **🩺 API Health Endpoint**: [https://bnb26nosleepclubinternalround-production.up.railway.app/health](https://bnb26nosleepclubinternalround-production.up.railway.app/health)
+- **📖 Interactive API Docs (Swagger)**: [https://bnb26nosleepclubinternalround-production.up.railway.app/docs](https://bnb26nosleepclubinternalround-production.up.railway.app/docs)
+
 Welcome to **Black Box**, a flight recorder and diagnostics platform for autonomous AI agents. Black Box captures every execution step an agent takes, stores rich trace metadata in Supabase PostgreSQL, diagnoses failures using ML and LLM models, and enables checkpointed replay to explore counterfactual fixes without re-running what did not change.
 
 ---

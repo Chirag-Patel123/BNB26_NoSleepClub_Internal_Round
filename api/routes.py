@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 import os
 import pathlib
@@ -215,6 +215,16 @@ def get_run(run_id: str):
             "graph_relationships": {"step-4": ["step-5"]}
         }
 
+    if run_id.startswith("R-") or run_id.startswith("IMP-"):
+        return {
+            "run_id": run_id,
+            "status": "failure",
+            "metadata": {"scenario_id": "flight_basic", "agent_version": "v1.0"},
+            "ordered_steps": [Step(**MOCK_STEP)],
+            "checkpoints": [{"checkpoint_id": "ckpt-5", "step_id": "step-5"}],
+            "graph_relationships": {"step-4": ["step-5"]}
+        }
+
     raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
 
 @router.get("/runs/{run_id}/diagnosis", response_model=DiagnosisResponse)
@@ -252,6 +262,26 @@ def get_run_diagnosis(run_id: str):
                     "step_id": "step-5",
                     "score": 0.91,
                     "evidence": [
+                        "output_valid=false",
+                        "retry_count=2",
+                        "steps 6 and 7 failed downstream"
+                    ]
+                }
+            ],
+            "model_version": "rf-v1"
+        }
+
+    if run_id.startswith("R-") or run_id.startswith("IMP-"):
+        is_imp = run_id.startswith("IMP-")
+        return {
+            "run_id": run_id,
+            "ranked_steps": [
+                {
+                    "step_id": "step-3" if is_imp else "step-5",
+                    "score": 0.94 if is_imp else 0.91,
+                    "evidence": [
+                        "Pre-booking invariant violated: booking payload destination deviates from requested journey."
+                    ] if is_imp else [
                         "output_valid=false",
                         "retry_count=2",
                         "steps 6 and 7 failed downstream"

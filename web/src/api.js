@@ -30,18 +30,26 @@ export async function fetchRun(id) {
 }
 
 export async function fetchDiagnosis(id) {
-  if (!id || id === "undefined") throw new Error("Invalid run ID")
-  const res = await fetch(`${BASE_URL}/runs/${id}/diagnosis`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
+  if (!id || id === "undefined" || id.startsWith("R-") || id.startsWith("IMP-")) return null
+  try {
+    const res = await fetch(`${BASE_URL}/runs/${id}/diagnosis`)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
 }
 
 // Optional: if the backend exposes an LLM-written summary, the UI uses it; otherwise it falls back to the built-in one.
 export async function fetchSummaryApi(id) {
-  if (!id || id === "undefined") throw new Error("Invalid run ID")
-  const res = await fetch(`${BASE_URL}/runs/${id}/summary`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
+  if (!id || id === "undefined" || id.startsWith("R-") || id.startsWith("IMP-")) return null
+  try {
+    const res = await fetch(`${BASE_URL}/runs/${id}/summary`)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
 }
 
 // Optional: if the backend can generalize across stored logs (e.g. with an LLM), the UI shows that text instead.
