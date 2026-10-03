@@ -19,9 +19,9 @@ faulty tool / faulty parameters ──► LLM agent loop ──► logs/llm_agen
 python -m agent.llm_pipeline generate --n 15 --agent-client scripted
 python -m agent.llm_pipeline evaluate --analysis-client heuristic
 
-# real Groq (Llama-3.3-70b-versatile, ultra-fast & pre-trained model)
+# real Groq (openai/gpt-oss-120b, ultra-fast & pre-trained model)
 set GROQ_API_KEY=your-key-here               (Windows cmd)   |   export GROQ_API_KEY=...        (bash)
-set GROQ_MODEL=llama-3.3-70b-versatile       (optional override)
+set GROQ_MODEL=openai/gpt-oss-120b           (optional override)
 python -m agent.llm_pipeline generate --n 20 --agent-client groq --log-dir logs/groq_agent
 python -m agent.llm_pipeline evaluate --log-dir logs/groq_agent --analysis-client groq
 ```

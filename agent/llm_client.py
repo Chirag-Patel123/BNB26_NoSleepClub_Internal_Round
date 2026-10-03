@@ -1,6 +1,6 @@
 """LLM clients (P1): pre-trained Groq API via HTTPS, plus an offline scripted agent policy.
 
-GroqClient          - real pre-trained model on Groq (Llama-3.3-70b-versatile); needs GROQ_API_KEY.
+GroqClient          - real pre-trained model on Groq (openai/gpt-oss-120b); needs GROQ_API_KEY.
 ScriptedAgentClient - deterministic offline stand-in that behaves like a tool-using model (NOT an LLM).
 HeuristicBaseline   - offline rules diagnoser used as a baseline / for tests (NOT an LLM).
 """
@@ -9,15 +9,15 @@ import json, os, re, time
 from typing import Any, Optional
 import httpx
 
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 
 class GroqClient:
     """Real model on Groq via OpenAI-compatible HTTPS API; needs GROQ_API_KEY.
-    Env: GROQ_MODEL (default llama-3.3-70b-versatile).
+    Env: GROQ_MODEL (default openai/gpt-oss-120b).
     """
     name = "groq"
-    DEFAULT_MODEL = "llama-3.3-70b-versatile"
+    DEFAULT_MODEL = "openai/gpt-oss-120b"
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
                  transport: Optional[httpx.BaseTransport] = None, timeout: float = 90.0):

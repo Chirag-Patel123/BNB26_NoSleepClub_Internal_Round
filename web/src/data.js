@@ -26,7 +26,7 @@ export const seed = () => {
 export function replayRun(o, cp) {
   const fixed = o.culprit != null && cp <= o.culprit
   const ok = fixed || o.ok
-  const n = mk('stale_search_result', ok)
+  const n = mk(o.ft || 'stale_search_result', ok)
   n.ft = ok ? null : o.ft; n.culprit = ok ? null : o.culprit; n.ev = ok ? [] : o.ev
   n.steps = o.steps.map((s, i) => (i < cp ? { ...s } : { ...s, ms: s.ms + ((i * 11) % 40) - 20, st: ok ? 'ok' : s.st, out: ok ? { ok: true, modified: i === cp } : s.out }))
   n.scores = ok ? o.scores.map((x, i) => (i < cp ? x : x * .3)) : o.scores

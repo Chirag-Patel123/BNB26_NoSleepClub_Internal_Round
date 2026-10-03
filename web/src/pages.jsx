@@ -276,11 +276,12 @@ export function Logs({ runs, live, busy, onRefreshRuns, onInvestigate }) {
   )
 }
 
-export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRunId, onRefreshDiagnosis, onGoToCompare, hasCompare, live, busy }) {
+export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRunId, onRefreshDiagnosis, onGoToCompare, hasCompare, live, busy, demoHl }) {
   const [customId, setCustomId] = useState('')
   const r = runs.find(x => x.id === rid) || runs[0]
   const top = r.scores.map((s, i) => [s, i]).sort((a, b) => b[0] - a[0])[0] || [0.5, 0]
   const [hl, setHl] = useState(null)
+  const activeHl = hl ?? demoHl
   const [ai, setAi] = useState(null)
   const sum = summarize(r)
   const linked = (r.ev || []).some(e => r.steps.some(s => mentions(e, s.name)))
@@ -376,7 +377,7 @@ export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRu
             <button className="btn sm pri" onClick={() => onReplay(r.id, open)} title="Replay from this checkpoint"><Icon n="history" /> Replay Before Step {st.n}</button>
           </div>
         </div>
-        <Graph run={r} sel={open} onSelect={setSel} hl={hl} />
+        <Graph run={r} sel={open} onSelect={setSel} hl={activeHl} />
       </div>
 
       <Latency r={r} />
@@ -385,7 +386,7 @@ export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRu
         <div>
           <div className="mu mono" style={{ marginBottom: 6 }}>EXECUTION · click a step</div>
           {r.steps.map((s, i) => (
-            <div key={s.n} className={'row ' + (i === open ? 'sel' : '') + (i === hl ? ' hl' : '')} role="button" tabIndex={0} aria-pressed={i === open}
+            <div key={s.n} className={'row ' + (i === open ? 'sel' : '') + (i === activeHl ? ' hl' : '')} role="button" tabIndex={0} aria-pressed={i === open}
               aria-label={`Step ${s.n}, ${s.name}, ${((r.scores[i] || 0) * 100).toFixed(0)} percent suspicion${s.st === 'failed' ? ', failed' : ''}`}
               onClick={() => setSel(i)} onKeyDown={kd(() => setSel(i))}>
               <div className="n mono">{s.n}</div>
