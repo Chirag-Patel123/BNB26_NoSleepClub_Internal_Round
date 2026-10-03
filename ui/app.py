@@ -8,42 +8,118 @@ API_URL = "http://localhost:8000"
 
 st.set_page_config(page_title="Black Box", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS for Glassmorphism & Neon aesthetics
+# Custom CSS for Skiper UI & shadcn aesthetics
 st.markdown("""
 <style>
-    /* Main background */
+    /* Google Fonts Import for sleek typography */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Base background inspired by Skiper UI (Deep Navy with subtle glow) */
     .stApp {
-        background-color: #0b0f19;
-        color: #e2e8f0;
+        background-color: #020817;
+        background-image: 
+            radial-gradient(circle at 15% 50%, rgba(30, 58, 138, 0.15), transparent 25%),
+            radial-gradient(circle at 85% 30%, rgba(13, 148, 136, 0.15), transparent 25%);
+        color: #f8fafc;
+    }
+
+    /* Hide default Streamlit artifacts */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {background-color: transparent !important;}
+
+    /* Premium Glass/Neon Metric Cards */
+    .metric-card-cyan, .metric-card-red {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
     
-    /* Neon Text & Glassmorphism cards */
-    .metric-card-cyan {
-        background: rgba(13, 25, 48, 0.6);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 255, 255, 0.2);
-        box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .metric-card-red {
-        background: rgba(48, 13, 13, 0.6);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 0, 50, 0.2);
-        box-shadow: 0 0 10px rgba(255, 0, 50, 0.1);
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
+    .metric-card-cyan::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 2px;
+        background: linear-gradient(90deg, transparent, #06b6d4, transparent);
+        opacity: 0.5;
     }
     
-    /* Hide default metric styles to use our custom cards */
+    .metric-card-red::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 2px;
+        background: linear-gradient(90deg, transparent, #ef4444, transparent);
+        opacity: 0.5;
+    }
+
+    .metric-card-cyan:hover, .metric-card-red:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* Metric Values styling */
     div[data-testid="stMetricValue"] {
-        font-size: 2rem;
-        font-weight: 800;
-        text-shadow: 0 0 5px rgba(255,255,255,0.3);
+        font-size: 2.5rem !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.025em;
+        background: linear-gradient(to right, #ffffff, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Buttons inspired by shadcn/Skiper primary */
+    .stButton > button {
+        background-color: #f8fafc;
+        color: #0f172a;
+        border: none;
+        border-radius: 6px;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    }
+    .stButton > button:hover {
+        background-color: #e2e8f0;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        transform: scale(1.02);
+    }
+
+    /* Expander (Accordion) styling */
+    .streamlit-expanderHeader {
+        background-color: rgba(15, 23, 42, 0.4) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+    }
+    .streamlit-expanderContent {
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-top: none !important;
+        border-bottom-left-radius: 8px !important;
+        border-bottom-right-radius: 8px !important;
+        background-color: rgba(15, 23, 42, 0.2) !important;
+    }
+    
+    /* Text Inputs / Selectboxes */
+    .stTextInput > div > div > input, .stSelectbox > div > div > div {
+        background-color: rgba(15, 23, 42, 0.6) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #f8fafc !important;
+        border-radius: 6px !important;
+    }
+    .stTextInput > div > div > input:focus, .stSelectbox > div > div > div:focus {
+        border-color: #06b6d4 !important;
+        box-shadow: 0 0 0 1px #06b6d4 !important;
     }
 </style>
 """, unsafe_allow_html=True)
