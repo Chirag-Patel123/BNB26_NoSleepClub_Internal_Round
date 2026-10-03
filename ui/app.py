@@ -286,18 +286,19 @@ elif page == "📊 Evaluation":
     st.title("📊 Evaluation Metrics")
     data = fetch_api("/evaluation")
     if data:
-        metrics = data.get("metrics", {})
+        metrics = data.get("summary", {})
+        rf_details = data.get("test_split", {}).get("random_forest", {})
         
         st.subheader("Localization Performance")
         loc_cols = st.columns(2)
-        loc_cols[0].metric("Top-1 Localization", f"{metrics.get('top_1_localization', 0)*100}%")
-        loc_cols[1].metric("Top-3 Localization", f"{metrics.get('top_3_localization', 0)*100}%")
+        loc_cols[0].metric("Top-1 Localization", f"{metrics.get('rf_top_1', 0)*100}%")
+        loc_cols[1].metric("Top-3 Localization", f"{metrics.get('rf_top_3', 0)*100}%")
         
         st.subheader("Diagnosis Accuracy")
         acc_cols = st.columns(3)
-        acc_cols[0].metric("Precision", metrics.get("precision", 0))
-        acc_cols[1].metric("Recall", metrics.get("recall", 0))
-        acc_cols[2].metric("F1 Score", metrics.get("f1", 0))
+        acc_cols[0].metric("Precision", f"{rf_details.get('precision', 0):.4f}")
+        acc_cols[1].metric("Recall", f"{rf_details.get('recall', 0):.4f}")
+        acc_cols[2].metric("F1 Score", f"{metrics.get('rf_f1', 0):.4f}")
         
-        st.subheader("Replay Efficiency")
-        st.metric("Recovery Rate", f"{metrics.get('recovery_rate', 0)*100}%")
+        st.subheader("Held-Out Robustness (Unseen Scenario)")
+        st.metric("Held-Out Top-1", f"{metrics.get('held_out_top_1', 0)*100}%")
