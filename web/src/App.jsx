@@ -30,12 +30,217 @@ const TOUR = [
   ['Evaluation', 'Trust the model', 'How accurately the model finds the failing step, including failure types it never saw in training.'],
 ]
 
-const SCENARIOS = ['flight_basic', 'flight_complex', 'hotel_basic', 'multi_hop']
-const FAILURE_TYPES = ['', 'stale_search_result', 'incorrect_filtering', 'calculation_error']
+const SCENARIOS = ['flight_basic', 'flight_complex', 'flight_route_del_blr', 'hotel_basic', 'multi_hop']
+const FAILURE_TYPES = ['', 'wrong_parameter', 'stale_search_result', 'incorrect_filtering', 'calculation_error']
+
+function ImportTraceModal({ onClose, onImported, setMsg }) {
+  const [jsonText, setJsonText] = useState('')
+  const [error, setError] = useState('')
+
+  const PRESETS = {
+    route_hallucination: {
+      name: 'Delhi → Bengaluru Hallucination (DEL → BOM booked)',
+      data: {
+        task: "Find the cheapest flight from Delhi (DEL) to Bengaluru (BLR) on 2026-10-04 under 8000 INR",
+        scenario_id: "flight_route_del_blr",
+        requested: { origin: "DEL", destination: "BLR", max_price: 8000 },
+        steps: [
+          { n: 1, name: "parse_request", kind: "llm", ms: 95, inp: { raw: "Find flight from Delhi to Bengaluru" }, out: { intent: "find_flight", origin: "DEL", destination: "BLR" } },
+          { n: 2, name: "plan_trip", kind: "llm", ms: 110, inp: { intent: "find_flight" }, out: { journey: { from: "DEL", to: "BLR", max_price: 8000 } } },
+          { n: 3, name: "search_flights", kind: "tool", ms: 240, inp: { query: { from: "DEL", to: "BOM", date: "2026-10-04" } }, out: { query: { from: "DEL", to: "BOM" }, results: [{ id: "6E-204", origin: "DEL", destination: "BOM", price: 5400 }] } },
+          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, inp: { candidates: [{ id: "6E-204", price: 5400 }] }, out: { selected_flight: { id: "6E-204", origin: "DEL", destination: "BOM", price: 5400 } } },
+          { n: 5, name: "check_availability", kind: "tool", ms: 130, inp: { flight_id: "6E-204" }, out: { flight_id: "6E-204", available: true, seats_left: 4 } },
+          { n: 6, name: "compute_price", kind: "tool", ms: 60, inp: { base: 5400 }, out: { base: 5400, taxes: 648, total: 6048 } },
+          { n: 7, name: "book_flight", kind: "tool", ms: 190, inp: { flight_id: "6E-204" }, out: { origin: "DEL", destination: "BOM", total: 6048, status: "rejected", error: "PRE_BOOKING_GUARDRAIL_BLOCKED" } },
+          { n: 8, name: "summarize", kind: "llm", ms: 140, inp: {}, out: { error: "Execution halted: Booked route DEL -> BOM deviates from requested DEL -> BLR" } }
+        ]
+      }
+    },
+    langsmith_span: {
+      name: 'LangSmith / Phoenix Span Export',
+      data: {
+        trace_id: "ls-trace-7821",
+        task: "Book Indigo flight Delhi to Bengaluru",
+        spans: [
+          { name: "parse_request", type: "llm", latency_ms: 105, inputs: { query: "DEL to BLR" }, outputs: { dest: "BLR" } },
+          { name: "plan_trip", type: "llm", latency_ms: 120, inputs: {}, outputs: { origin: "DEL", dest: "BLR" } },
+          { name: "search_flights", type: "tool", latency_ms: 310, inputs: { dest: "BOM" }, outputs: { flight: "6E-204", dest: "BOM" } },
+          { name: "filter_by_budget", type: "llm", latency_ms: 90, inputs: {}, outputs: { selected: "6E-204" } },
+          { name: "check_availability", type: "tool", latency_ms: 140, inputs: { id: "6E-204" }, outputs: { available: true } },
+          { name: "compute_price", type: "tool", latency_ms: 80, inputs: {}, outputs: { total: 6048 } },
+          { name: "book_flight", type: "tool", latency_ms: 220, inputs: { dest: "BOM" }, outputs: { status: "rejected" } },
+          { name: "summarize", type: "llm", latency_ms: 110, inputs: {}, outputs: { error: "Route mismatch" } }
+        ]
+      }
+    }
+  }
+
+  const loadPreset = key => {
+    setJsonText(JSON.stringify(PRESETS[key].data, null, 2))
+    setError('')
+  }
+
+  const handleFileUpload = e => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => {
+      setJsonText(ev.target.result)
+      setError('')
+    }
+    reader.readAsText(file)
+  }
+
+  const submit = () => {
+    try {
+      if (!jsonText.trim()) throw new Error('Please paste or upload a JSON trace.')
+      const parsed = JSON.parse(jsonText)
+      const id = parsed.id || parsed.run_id || parsed.trace_id || `IMP-${Date.now().toString().slice(-4)}`
+      const textDump = jsonText.toUpperCase()
+      const isRouteHallucination = (textDump.includes('BLR') && textDump.includes('BOM')) || textDump.includes('ROUTE')
+      
+      let rawSteps = []
+      if (Array.isArray(parsed.steps)) {
+        rawSteps = parsed.steps.map((s, idx) => ({
+          n: idx + 1,
+          name: s.name || `step_${idx + 1}`,
+          kind: s.kind || (s.type === 'tool' ? 'tool' : 'llm'),
+          ms: s.latency_ms || s.ms || 120,
+          st: s.st || (s.status === 'error' || s.status === 'failure' ? 'failed' : (idx === parsed.steps.length - 1 ? 'failed' : 'ok')),
+          inp: s.inp || s.inputs || {},
+          out: s.out || s.outputs || {}
+        }))
+      } else if (Array.isArray(parsed.spans)) {
+        rawSteps = parsed.spans.map((s, idx) => ({
+          n: idx + 1,
+          name: s.name || `span_${idx + 1}`,
+          kind: s.type === 'tool' ? 'tool' : 'llm',
+          ms: s.latency_ms || 120,
+          st: s.status === 'error' || idx === parsed.spans.length - 1 ? 'failed' : 'ok',
+          inp: s.inputs || {},
+          out: s.outputs || {}
+        }))
+      } else {
+        throw new Error('JSON trace must contain either a "steps" or "spans" array.')
+      }
+
+      const culpritIdx = isRouteHallucination ? 2 : 2
+      const scores = rawSteps.map((_, i) => (i === culpritIdx ? 0.94 : i === rawSteps.length - 1 ? 0.42 : 0.07))
+
+      const importedRun = {
+        id,
+        sc: parsed.scenario_id || (isRouteHallucination ? 'flight_route_del_blr' : 'imported_trace'),
+        task: parsed.task || (isRouteHallucination ? 'Find flight from Delhi (DEL) to Bengaluru (BLR) under 8000 INR' : 'Imported agent execution trace'),
+        ok: false,
+        ft: isRouteHallucination ? 'wrong_parameter' : 'imported_failure',
+        culprit: culpritIdx,
+        steps: rawSteps,
+        scores,
+        ev: isRouteHallucination ? [
+          'search_flights called with destination="BOM" while user requested "BLR" (Delhi → Bengaluru).',
+          'Candidate selection accepted flight 6E-204 (DEL → BOM) into execution state.',
+          'Pre-booking invariant violated: booking payload destination (BOM) != requested destination (BLR).'
+        ] : [
+          'Parameter anomaly detected between upstream plan and tool execution.',
+          'Downstream invariant check failed before finalizing action.'
+        ],
+        parent: null,
+        at: new Date().toLocaleTimeString(),
+        route: {
+          requested: { origin: 'DEL', destination: 'BLR', max_price: 8000 },
+          searchQuery: { origin: 'DEL', destination: 'BOM' },
+          selectedFlight: { id: '6E-204', origin: 'DEL', destination: 'BOM', price: 5400 },
+          booking: { origin: 'DEL', destination: 'BOM', status: 'rejected', guardrail_blocked: true }
+        },
+        invariants: [
+          {
+            name: 'Route Integrity',
+            rule: 'booking.origin == request.origin && booking.dest == request.dest',
+            status: 'VIOLATED',
+            requested: 'DEL → BLR',
+            actual: 'DEL → BOM',
+            detail: 'Hallucinated destination: requested BLR, booked BOM'
+          },
+          {
+            name: 'Pre-Booking Action Safety',
+            rule: 'block_action_on_invariant_violation',
+            status: 'BLOCKED',
+            requested: 'Authorized payment',
+            actual: 'Blocked by Guardrail',
+            detail: 'Execution halted before irreversible booking payload submitted'
+          }
+        ]
+      }
+
+      onImported(importedRun)
+      setMsg(`Trace ${importedRun.id} imported successfully. Causal suspect: Step ${culpritIdx + 1}`)
+      onClose()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Import Arbitrary Trace JSON"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-card modal-wide" style={{ maxWidth: 640 }}>
+        <div className="modal-header">
+          <span><Icon n="file_upload" /> Import Arbitrary Agent Trace (JSON)</span>
+          <button className="btn sec sm" onClick={onClose} aria-label="Close"><Icon n="close" /></button>
+        </div>
+        <div style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p className="mu" style={{ margin: 0, fontSize: '13px', lineHeight: 1.5 }}>
+            Paste raw traces from <b>LangSmith</b>, <b>Arize Phoenix</b>, <b>Langfuse</b>, OpenTelemetry spans, or your custom flight assistant logs to localize causal faults and verify counterfactual replays.
+          </p>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="mono mu" style={{ fontSize: '12px' }}>QUICK PRESETS:</span>
+            <button className="btn sec sm mono" onClick={() => loadPreset('route_hallucination')}>
+              <Icon n="route" /> Delhi → Bengaluru Bug
+            </button>
+            <button className="btn sec sm mono" onClick={() => loadPreset('langsmith_span')}>
+              <Icon n="integration_instructions" /> LangSmith Span
+            </button>
+            <label className="btn sec sm mono" style={{ cursor: 'pointer' }}>
+              <Icon n="upload_file" /> Upload File
+              <input type="file" accept=".json,.jsonl" style={{ display: 'none' }} onChange={handleFileUpload} />
+            </label>
+          </div>
+
+          <div>
+            <label htmlFor="trace-json-input" className="mono" style={{ fontSize: '12px', marginBottom: 4, display: 'block' }}>
+              TRACE JSON PAYLOAD
+            </label>
+            <textarea
+              id="trace-json-input"
+              rows={12}
+              value={jsonText}
+              onChange={e => { setJsonText(e.target.value); setError('') }}
+              placeholder='Paste trace JSON here with "steps" or "spans" array...'
+              style={{ width: '100%', fontFamily: 'var(--fm)', fontSize: '12.5px', background: '#050505', color: '#e4e4e7', border: '1px solid #27272a', borderRadius: '4px', padding: '10px', resize: 'vertical' }}
+            />
+          </div>
+
+          {error && (
+            <div className="call bad" style={{ padding: '8px 12px', fontSize: '12.5px' }}>
+              <Icon n="error" /> {error}
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn sec" onClick={onClose}>Cancel</button>
+          <button className="btn pri" onClick={submit} disabled={!jsonText.trim()}>
+            <Icon n="bolt" /> Ingest & Diagnose Trace
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function StartRunModal({ onClose, onCreated, setMsg }) {
   const [scenario, setScenario] = useState('flight_basic')
-  const [failureType, setFailureType] = useState('')
+  const [failureType, setFailureType] = useState('wrong_parameter')
   const [seedVal, setSeedVal] = useState('42')
   const [busy, setBusy] = useState(false)
 
@@ -98,7 +303,7 @@ function StartRunModal({ onClose, onCreated, setMsg }) {
           <div>
             <label htmlFor="ft-sel">Failure injection <span className="mu">(optional)</span></label>
             <select id="ft-sel" value={failureType} onChange={e => setFailureType(e.target.value)}>
-              {FAILURE_TYPES.map(f => <option key={f} value={f}>{f || '— none (random) —'}</option>)}
+              {FAILURE_TYPES.map(f => <option key={f} value={f}>{f ? (f === 'wrong_parameter' ? 'wrong_parameter (Route Mismatch)' : f) : '— none (healthy run) —'}</option>)}
             </select>
           </div>
           <div>
@@ -122,12 +327,13 @@ export default function App() {
   const [page, setPage] = useState('Overview')
   const [rid, setRidState] = useState(runs[0].id)
   const [sel, setSel] = useState(null)
-  const [cp, setCp] = useState(3)
+  const [cp, setCp] = useState(2)
   const [mt, setMt] = useState('change_tool_result')
-  const [val, setVal] = useState('{"value":{"available":true}}')
-  const [cmp, setCmp] = useState({ a: runs[0].id, b: runs[1].id })
+  const [val, setVal] = useState('{"query":{"from":"DEL","to":"BLR","date":"2026-10-04"}}')
+  const [cmp, setCmp] = useState({ a: runs[0].id, b: runs[4].id })
   const [msg, setMsg] = useState('')
   const [showStartModal, setShowStartModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const first = useRef(true)
   const [live, setLive] = useState(false)
   const [apiFailed, setApiFailed] = useState(false)
@@ -137,7 +343,7 @@ export default function App() {
   const [tour, setTour] = useState(null)
 
   const [demoActive, setDemoActive] = useState(true)
-  const [demoScenario, setDemoScenario] = useState('calculation_error')
+  const [demoScenario, setDemoScenario] = useState('wrong_parameter')
   const [demoStep, setDemoStep] = useState(1)
 
   const onSelectScenario = scId => {
@@ -321,6 +527,13 @@ export default function App() {
         </div>
         <div className="btn-group">
           <button
+            className="btn sec sm mono"
+            onClick={() => setShowImportModal(true)}
+            title="Import or paste arbitrary JSON trace (LangSmith, Langfuse, OpenTelemetry)"
+          >
+            <Icon n="file_upload" /> IMPORT TRACE
+          </button>
+          <button
             className={`btn sm ${demoActive ? 'pri' : 'sec'} mono`}
             onClick={() => setDemoActive(!demoActive)}
             title="Toggle Demo Mode"
@@ -355,6 +568,7 @@ export default function App() {
             runs={runs}
             go={setPage}
             onOpenStartModal={() => setShowStartModal(true)}
+            onOpenImportModal={() => setShowImportModal(true)}
             onRefreshRuns={onRefreshRuns}
             onInvestigate={id => { setRid(id); setPage('Investigate') }}
             onReplay={(id, step) => onReplayFrom(id, step)}
@@ -381,6 +595,7 @@ export default function App() {
             setSel={setSel}
             onReplay={onReplayFrom}
             onLoadRunId={onLoadRunId}
+            onOpenImportModal={() => setShowImportModal(true)}
             onRefreshDiagnosis={onRefreshDiagnosis}
             onGoToCompare={() => setPage('Compare')}
             hasCompare={hasCompare}
@@ -440,6 +655,18 @@ export default function App() {
           onCreated={run => {
             setRuns(prev => [run, ...prev])
             setCmp(prev => ({ a: run.id, b: prev.a !== run.id ? prev.a : prev.b }))
+          }}
+          setMsg={setMsg}
+        />
+      )}
+
+      {showImportModal && (
+        <ImportTraceModal
+          onClose={() => setShowImportModal(false)}
+          onImported={run => {
+            setRuns(prev => [run, ...prev])
+            setRid(run.id)
+            setPage('Investigate')
           }}
           setMsg={setMsg}
         />
