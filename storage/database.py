@@ -53,16 +53,26 @@ def create_db_engine(db_url: str | None = None):
 # Global singleton engine and sessionmaker
 engine = create_db_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+_DB_INITIALIZED = False
+
+
+def ensure_tables(target_engine=None) -> None:
+    global _DB_INITIALIZED
+    if not _DB_INITIALIZED:
+        init_db(target_engine or engine)
+        _DB_INITIALIZED = True
 
 
 def get_session() -> Session:
     """Return a new SQLAlchemy Session."""
+    ensure_tables()
     return SessionLocal()
 
 
 @contextmanager
 def get_db() -> Generator[Session, None, None]:
     """Context manager for transactional database access with auto-rollback on error."""
+    ensure_tables()
     session = SessionLocal()
     try:
         yield session

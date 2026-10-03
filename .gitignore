@@ -7,3 +7,4 @@ venv/
 .streamlit/secrets.toml
 *.pdf
 Black_Box_24_Hour_Master_Sync_Plan_v6.pdf
+*.db
