@@ -23,3 +23,8 @@ app.include_router(router)
 @app.get("/")
 def root():
     return {"message": "Black Box API is running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "blackbox-api"}
+
