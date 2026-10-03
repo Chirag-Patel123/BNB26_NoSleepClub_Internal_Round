@@ -33,6 +33,20 @@ MOCK_STEP = {
 def start_run(req: RunRequest):
     return {"run_id": "run-123", "status": "running"}
 
+@router.get("/runs/compare", response_model=CompareResponse)
+def compare_runs(original_id: str, alternative_id: str):
+    return {
+        "original_run_id": original_id,
+        "alternative_run_id": alternative_id,
+        "common_prefix_steps": 4,
+        "changed_steps": ["step-5"],
+        "rerun_steps": ["step-5", "step-6", "step-7"],
+        "final_status_original": "failure",
+        "final_status_alternative": "success",
+        "runtime_original_ms": 2500,
+        "runtime_alternative_ms": 1100
+    }
+
 @router.get("/runs/{run_id}", response_model=RunDetailResponse)
 def get_run(run_id: str):
     return {
@@ -67,20 +81,6 @@ def replay_run(run_id: str, req: ReplayRequest):
     return {
         "original_run_id": run_id,
         "alternative_run_id": "run-456"
-    }
-
-@router.get("/runs/compare", response_model=CompareResponse)
-def compare_runs(original_id: str, alternative_id: str):
-    return {
-        "original_run_id": original_id,
-        "alternative_run_id": alternative_id,
-        "common_prefix_steps": 4,
-        "changed_steps": ["step-5"],
-        "rerun_steps": ["step-5", "step-6", "step-7"],
-        "final_status_original": "failure",
-        "final_status_alternative": "success",
-        "runtime_original_ms": 2500,
-        "runtime_alternative_ms": 1100
     }
 
 @router.get("/evaluation")
