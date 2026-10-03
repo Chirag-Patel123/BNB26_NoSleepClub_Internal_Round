@@ -1,6 +1,6 @@
 export const Icon = ({ n }) => <span className="ms" aria-hidden="true">{n}</span>
 
-const MI = { 'Recorded runs':'database', Failures:'report', 'Top-1 localization':'target', 'Top suspect':'my_location', Suspicion:'speed', 'Observed failure':'flag', 'Shared steps':'link', 'Re-executed':'refresh', 'Runtime delta':'timer', F1:'functions', 'Top-1':'target', 'Top-3':'stacks', MRR:'leaderboard', 'Held-out Top-1':'visibility_off', 'Replay fix rate':'build_circle' }
+const MI = { 'Recorded runs':'database', Failures:'report', 'Top-1 localization':'target', 'Top suspect':'my_location', Suspicion:'speed', 'Observed failure':'flag', 'Shared steps':'link', 'Re-executed':'refresh', 'Runtime delta':'timer', F1:'functions', 'Top-1':'target', 'Top-3':'stacks', MRR:'leaderboard', 'Held-out Top-1':'visibility_off', 'Replay fix rate':'build_circle', 'Avg run time':'timer', 'Logged runs':'receipt_long' }
 
 export const Metric = ({ l, v, n }) => (
   <div className="card met">
