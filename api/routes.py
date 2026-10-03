@@ -3,6 +3,8 @@ from .schemas import (
     RunRequest, RunResponse, ReplayRequest, ReplayResponse, 
     RunDetailResponse, DiagnosisResponse, CompareResponse, Step
 )
+import json
+import pathlib
 
 router = APIRouter()
 
@@ -85,13 +87,8 @@ def replay_run(run_id: str, req: ReplayRequest):
 
 @router.get("/evaluation")
 def get_evaluation():
-    return {
-        "metrics": {
-            "top_1_localization": 0.95,
-            "top_3_localization": 0.99,
-            "precision": 0.88,
-            "recall": 0.92,
-            "f1": 0.90,
-            "recovery_rate": 0.85
-        }
-    }
+    try:
+        report_path = pathlib.Path("data/benchmark/evaluation_report.json")
+        return json.loads(report_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        return {"error": str(e)}
