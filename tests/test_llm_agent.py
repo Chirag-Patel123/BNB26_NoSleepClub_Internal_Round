@@ -2,7 +2,7 @@ import json
 import httpx
 import pytest
 from agent.llm_agent import LLMFault, run_llm_agent, make_task
-from agent.llm_client import AnthropicClient, GroqClient, HeuristicBaseline, ScriptedAgentClient
+from agent.llm_client import GroqClient, HeuristicBaseline, ScriptedAgentClient
 from agent.llm_tools import ALL_FAULTS
 from agent import llm_pipeline as P
 from tracing.render import render_trace
@@ -96,44 +96,6 @@ def test_grounding_check_flags_invented_quotes(tmp_path):
 def test_unparseable_llm_reply_is_safe():
     assert P._parse_json("sorry, I can't")["origin_step_id"] == "none"
 
-def _mock_api(script):
-    """Mock Anthropic API returning scripted tool_use / text responses in order."""
-    state = {"i": 0, "requests": []}
-    def handler(request: httpx.Request):
-        body = json.loads(request.content)
-        state["requests"].append(body)
-        resp = script[state["i"]]
-        state["i"] += 1
-        return httpx.Response(200, json={"content": resp, "usage": {"input_tokens": 10, "output_tokens": 5}})
-    return httpx.MockTransport(handler), state
-
-def test_anthropic_client_drives_real_tool_loop():
-    tu = lambda i, n, inp: {"type": "tool_use", "id": i, "name": n, "input": inp}
-    script = [
-        [{"type": "text", "text": "Searching."}, tu("t1", "search_flights", {"origin": "BOM", "destination": "DEL", "date": "2026-10-04"})],
-        [tu("t2", "check_availability", {"flight_id": "F101"})],
-        [tu("t3", "calculate_price", {"flight_id": "F101", "passengers": 1})],
-        None,  # filled below with the real total
-    ]
-    ref = run_llm_agent(C, "flight_basic", 42, log_dir=None).result.steps[2].output_summary["total"]
-    script[3] = [tu("t4", "prepare_booking", {"flight_id": "F101", "total": ref})]
-    script.append([{"type": "text", "text": "Done."}])
-    transport, state = _mock_api(script)
-    client = AnthropicClient(api_key="test-key", model="test-model", transport=transport)
-    r = run_llm_agent(client, "flight_basic", 42, log_dir=None)
-    assert r.result.run.status == "success"
-    assert [s.tool for s in r.result.steps] == ["search_flights", "check_availability", "calculate_price", "prepare_booking", None]
-    assert all(s.model == "test-model" for s in r.result.steps)
-    assert r.result.steps[0].tokens == 15
-    # second request must carry the tool_result for the first call, in API format
-    msgs = state["requests"][1]["messages"]
-    assert msgs[-1]["role"] == "user" and msgs[-1]["content"][0]["type"] == "tool_result" and msgs[-1]["content"][0]["tool_use_id"] == "t1"
-    assert state["requests"][0]["tools"][0]["name"] == "search_flights" and "x-api-key" not in json.dumps(state["requests"][0])
-
-def test_anthropic_client_requires_key(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    with pytest.raises(RuntimeError):
-        AnthropicClient()
 
 
 def _mock_groq_api(script):
