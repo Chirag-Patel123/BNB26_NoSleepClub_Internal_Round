@@ -1,0 +1,40 @@
+const X = i => 56 + i * 104
+
+// Execution graph. Tool calls on the top lane, model calls on the bottom; size/redness = suspicion.
+export default function Graph({ run: r, sel, onSelect, dim }) {
+  const Y = i => (r.steps[i].kind === 'tool' ? 50 : 104)
+  const pick = i => e => { if (onSelect && (e.type === 'click' || e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect(i) } }
+  const dx = dim > 0 ? (X(dim - 1) + X(dim)) / 2 : null
+  return (
+    <>
+      <div className="mu mono" style={{ marginBottom: 4 }}>{r.id} · {r.ok ? 'success' : 'failure'}</div>
+      <div className="scroll">
+        <svg className="g" viewBox="0 0 860 160" style={{ minWidth: 680, width: '100%', height: 'auto' }}
+          role={onSelect ? 'group' : 'img'} aria-label={`Execution graph of ${r.id}. Steps are also listed below.`}>
+          <text x="2" y="16">tools</text><text x="2" y="132">model</text>
+          {r.steps.slice(0, 7).map((_, i) => {
+            const bad = !r.ok && i >= r.culprit
+            return <path key={i} d={`M${X(i)} ${Y(i)}C${X(i)+52} ${Y(i)} ${X(i+1)-52} ${Y(i+1)} ${X(i+1)} ${Y(i+1)}`} fill="none"
+              stroke={bad ? 'var(--bad)' : 'var(--mu)'} strokeWidth="2" strokeDasharray={bad ? '5 4' : undefined} opacity=".7" />
+          })}
+          {dx != null && <><line x1={dx} x2={dx} y1="14" y2="150" stroke="var(--wn)" strokeWidth="2" strokeDasharray="4 4" /><text x={dx + 6} y="24" style={{ fill: 'var(--wn)' }}>diverges · earlier steps cached</text></>}
+          {r.steps.map((s, i) => {
+            const sc = r.scores[i], rad = 14 + sc * 18, pct = Math.min(100, Math.round(sc * 100) + 6), cu = r.culprit === i, sl = sel === i
+            const label = s.st === 'failed' ? 'failed' : cu ? 'suspect' : null
+            const a11y = onSelect ? { role: 'button', tabIndex: 0, 'aria-pressed': sl, 'aria-label': `Step ${s.n} ${s.name}, ${(sc * 100).toFixed(0)} percent suspicion`, onClick: pick(i), onKeyDown: pick(i), style: { cursor: 'pointer' } } : {}
+            return (
+              <g key={s.n} opacity={dim != null && i < dim ? .5 : 1} {...a11y}>
+                <title>{`${s.name} · ${(sc * 100).toFixed(0)}% suspicion`}</title>
+                <circle cx={X(i)} cy={Y(i)} r={rad} style={{ fill: `color-mix(in srgb,var(--bad) ${pct}%,var(--s1))` }}
+                  stroke={sl ? 'var(--ac)' : cu ? 'var(--bad)' : 'var(--ln)'} strokeWidth={sl || cu ? 3 : 1.5} />
+                <text className="nn" x={X(i)} y={Y(i) + 4}>{s.n}</text>
+                <text className="nm" x={X(i)} y={Y(i) + rad + 13}>{s.name}</text>
+                {label && <text className="sus" x={X(i)} y={Y(i) - rad - 6}>{label}</text>}
+              </g>
+            )
+          })}
+        </svg>
+      </div>
+    </>
+  )
+}
