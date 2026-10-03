@@ -1,0 +1,4 @@
+Model,Split,Top-1 Acc,Top-3 Acc,MRR,F1
+RandomForest (rf-v1),Test (All),1.0,1.0,1.0,0.9283
+Rule Baseline,Test (All),0.6135,1.0,0.7424,0.4447
+RandomForest (rf-v1),Held-Out Scenario,1.0,1.0,1.0,0.9311
