@@ -81,7 +81,7 @@ function EvalChart({ sample }) {
   )
 }
 
-export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefreshRuns, onInvestigate, onReplay, onRandomRun, live, busy, apiFailed }) {
+export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefreshRuns, onInvestigate, onReplay, onRandomRun, onOpenAnalogyModal, live, busy, apiFailed }) {
   const failures = runs.filter(r => !r.ok).length
   const cards = [
     ['Investigate', 'Find the suspicious step', 'See the ranked diagnosis and the evidence behind it.', 'search_insights'],
@@ -104,6 +104,21 @@ export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefr
           </div>
         </div>
         <div style={{ marginTop: 14 }}><Graph run={runs.find(r => !r.ok) || runs[0]} /></div>
+      </div>
+
+      <div className="card" style={{ marginTop: 'var(--gap)', borderLeft: '3px solid #ffffff' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <span className="eb" style={{ color: '#ffffff' }}>JUDGE PITCH // THE ANALOGY</span>
+            <h3 style={{ margin: '4px 0 6px', fontSize: 15 }}>Why the Flight Booking Demo?</h3>
+            <p className="mu" style={{ maxWidth: 740, fontSize: 12.5, margin: 0 }}>
+              <b>Short answer: The project is about AI agents, not airplanes.</b> <i>"Flight recorder"</i> is an analogy: just as a flight black box records everything before a crash, Black Box records an agent's multi-step execution to diagnose why and where it failed. Flight booking is an intuitive task demonstrating how an upstream bug (searching Mumbai → Bengaluru instead of Mumbai → Delhi at Step 3) silently propagates until crashing at Step 8.
+            </p>
+          </div>
+          <button className="btn sec sm mono" onClick={onOpenAnalogyModal} style={{ whiteSpace: 'nowrap' }}>
+            <Icon n="flight_takeoff" /> VIEW FULL JUDGE GUIDE
+          </button>
+        </div>
       </div>
 
       {!live && apiFailed && (
@@ -623,6 +638,7 @@ export function Replay({ runs, rid, setRid, cp, setCp, mt, setMt, val, setVal, o
           <div style={{ margin: '10px 0 4px' }}>
             <label style={{ margin: '0 0 6px' }}>Quick Payload Presets</label>
             <div className="btn-group">
+              <button className="btn sm sec" onClick={() => setVal('{"value":{"destination":"DEL","city":"Delhi"}}')}>Flight: DEL (Delhi)</button>
               <button className="btn sm sec" onClick={() => setVal('{"value":{"target_region":"US-WEST"}}')}>Target: US-WEST</button>
               <button className="btn sm sec" onClick={() => setVal('{"value":{"net_payout":9680,"status":"verified"}}')}>Valid Settlement</button>
               <button className="btn sm sec" onClick={() => setVal('{"value":{"schema_version":"v2.4","drift":false}}')}>Live Schema v2.4</button>

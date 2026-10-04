@@ -1,6 +1,21 @@
 // Diverse real-world agent domains and trace data generator
 
 export const DOMAINS = {
+  flight_booking: {
+    id: 'flight_booking',
+    name: 'Flight Booking Agent (Flagship Demo)',
+    badge: 'ANALOGY // FLIGHT DEMO',
+    steps: [
+      ['understand_request', 'llm'],
+      ['plan_trip', 'llm'],
+      ['search_flights', 'tool'],
+      ['filter_by_budget', 'llm'],
+      ['check_availability', 'tool'],
+      ['calculate_price', 'tool'],
+      ['book_flight', 'tool'],
+      ['summarize', 'llm']
+    ]
+  },
   cloud_infra: {
     id: 'cloud_infra',
     name: 'Cloud Infrastructure Provisioning',
@@ -79,6 +94,17 @@ export const DOMAINS = {
 }
 
 export const FT = {
+  route_hallucination: {
+    c: 2,
+    l: 'Route Destination Mismatch (Wrong City Query)',
+    badge: 'PARAMETER INVARIANT VIOLATION',
+    domain: 'flight_booking',
+    e: [
+      'search_flights invoked with destination="BLR" while user requested "DEL" (Mumbai to Delhi).',
+      'Candidate selection filtered flight AI-202 (BOM → BLR) into execution state.',
+      'Step 8 guardrail assertion failed: booked destination BLR does not match requested destination DEL.'
+    ]
+  },
   wrong_parameter: {
     c: 2,
     l: 'Target Key Mismatch (Wrong Parameter)',
@@ -158,7 +184,56 @@ export function mk(ft, ok, opts = {}) {
   let invariants = []
   let stepsConfig = domain.steps
 
-  if (domainKey === 'cloud_infra') {
+  if (domainKey === 'flight_booking') {
+    const isBug = failureKey === 'route_hallucination' || failureKey === 'wrong_parameter'
+    const requested = {
+      origin: 'Mumbai (BOM)',
+      destination: 'Delhi (DEL)',
+      max_budget: 6000,
+      timestamp: '2026-10-04'
+    }
+    const searchQuery = (isBug && !isHealthy)
+      ? { from: 'BOM', to: 'BLR', date: '2026-10-04' }
+      : { from: 'BOM', to: 'DEL', date: '2026-10-04' }
+
+    const selectedRecord = (isBug && !isHealthy)
+      ? { id: 'AI-202', airline: 'Air India', from: 'BOM', to: 'BLR', price: 4200 }
+      : { id: '6E-501', airline: 'IndiGo', from: 'BOM', to: 'DEL', price: 4800 }
+
+    const action = (isBug && !isHealthy)
+      ? { from: 'BOM', to: 'BLR', total: 4830, status: 'rejected', pnr: null, error: 'DESTINATION_MISMATCH' }
+      : { from: 'BOM', to: 'DEL', total: 5430, status: 'confirmed', pnr: 'PNR-6E8492' }
+
+    task = 'Book me the cheapest flight from Mumbai to Delhi under ₹6000'
+    route = { requested, searchQuery, selectedRecord, action }
+
+    invariants = [
+      {
+        name: 'Route Destination Match',
+        rule: 'booked.destination == requested.destination',
+        status: (isBug && !isHealthy) ? 'VIOLATED' : 'PASSED',
+        requested: 'BOM → DEL (Mumbai to Delhi)',
+        actual: (isBug && !isHealthy) ? 'BOM → BLR (Mumbai to Bengaluru)' : 'BOM → DEL (Mumbai to Delhi)',
+        detail: (isBug && !isHealthy) ? 'Hallucinated destination: requested Delhi (DEL), searched/booked Bengaluru (BLR)' : 'Destination strictly verified'
+      },
+      {
+        name: 'Budget / Fare Ceiling',
+        rule: 'booked.total <= requested.max_budget',
+        status: 'PASSED',
+        requested: '≤ ₹6,000 INR',
+        actual: `₹${action.total.toLocaleString()} INR`,
+        detail: 'Under requested ₹6,000 threshold'
+      },
+      {
+        name: 'Non-Negative Fare',
+        rule: 'booked.total > 0',
+        status: 'PASSED',
+        requested: '> ₹0',
+        actual: `₹${action.total} INR`,
+        detail: 'Valid fare calculation'
+      }
+    ]
+  } else if (domainKey === 'cloud_infra') {
     const isBug = failureKey === 'wrong_parameter'
     const requested = {
       source_region: 'US-EAST',
@@ -388,7 +463,40 @@ export function mk(ft, ok, opts = {}) {
     let inp = {}
     let out = { ok: true }
 
-    if (i === 0) {
+    if (domainKey === 'flight_booking') {
+      const isBug = (failureKey === 'route_hallucination' || failureKey === 'wrong_parameter') && !isHealthy
+      if (i === 0) {
+        inp = { user_prompt: task }
+        out = { intent: 'book_flight', origin: 'BOM', destination: 'DEL', max_budget: 6000 }
+      } else if (i === 1) {
+        inp = { intent: 'book_flight', origin: 'BOM', destination: 'DEL', max_budget: 6000 }
+        out = { plan: ['search_flights', 'filter_by_budget', 'check_availability', 'calculate_price', 'book_flight'] }
+      } else if (i === 2) {
+        inp = { query: route.searchQuery }
+        out = isBug
+          ? { results: [{ id: 'AI-202', from: 'BOM', to: 'BLR', price: 4200, airline: 'Air India' }], note: 'destination mismatch: BLR queried instead of DEL' }
+          : { results: [{ id: '6E-501', from: 'BOM', to: 'DEL', price: 4800, airline: 'IndiGo' }] }
+      } else if (i === 3) {
+        inp = { candidates: [isBug ? { id: 'AI-202', price: 4200 } : { id: '6E-501', price: 4800 }], budget: 6000 }
+        out = { selected: isBug ? { id: 'AI-202', from: 'BOM', to: 'BLR', price: 4200 } : { id: '6E-501', from: 'BOM', to: 'DEL', price: 4800 } }
+      } else if (i === 4) {
+        inp = { flight_id: isBug ? 'AI-202' : '6E-501' }
+        out = { seats_available: 5, status: 'confirmed' }
+      } else if (i === 5) {
+        inp = { base: isBug ? 4200 : 4800, tax_rate: 0.15 }
+        out = { base: isBug ? 4200 : 4800, taxes: 630, total: isBug ? 4830 : 5430 }
+      } else if (i === 6) {
+        inp = { flight_id: isBug ? 'AI-202' : '6E-501', passenger: 'Passenger', total: isBug ? 4830 : 5430 }
+        out = isHealthy
+          ? { pnr: 'PNR-6E8492', status: 'issued_confirmed' }
+          : { pnr: 'PNR-AI9021', status: 'issued_with_destination_error', target_airport: 'BLR' }
+      } else if (i === 7) {
+        inp = { pnr: isHealthy ? 'PNR-6E8492' : 'PNR-AI9021' }
+        out = isHealthy
+          ? { summary: 'Successfully booked Mumbai (BOM) to Delhi (DEL) on 6E-501 for ₹5,430 (under ₹6,000 budget). PNR: 6E8492.' }
+          : { error: 'ASSERTION_VIOLATION', message: 'Execution failed: Booked destination BLR contradicts user request DEL (Mumbai to Delhi).' }
+      }
+    } else if (i === 0) {
       inp = { prompt: task }
       out = { intent: domainKey, confidence: 0.99 }
     } else if (i === 1) {
@@ -479,11 +587,12 @@ export function generateRandomRun(preferredDomain, preferredOk) {
  */
 export const seed = () => {
   return [
+    mk('route_hallucination', 0, { domain: 'flight_booking', id: 'RUN-1040-FLIGHT' }),
     mk('wrong_parameter', 0, { domain: 'cloud_infra', id: 'RUN-1041-DEVOPS' }),
     mk('calculation_error', 0, { domain: 'ecommerce_settlement', id: 'RUN-1042-FINTECH' }),
     mk('stale_search_result', 0, { domain: 'etl_pipeline', id: 'RUN-1043-LAKEHOUSE' }),
     mk('incorrect_filtering', 0, { domain: 'customer_refund', id: 'RUN-1044-ESCROW' }),
-    mk(null, 1, { domain: 'security_iam', id: 'RUN-1045-HEALTHY' }),
+    mk(null, 1, { domain: 'flight_booking', id: 'RUN-1045-HEALTHY' }),
   ]
 }
 

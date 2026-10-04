@@ -60,23 +60,23 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
 
   const PRESETS = {
     route_hallucination: {
-      name: 'Target Parameter Mismatch (Wrong Parameter)',
-      icon: 'alt_route',
+      name: 'Flight Booking (Mumbai → Delhi Route Bug)',
+      icon: 'flight_takeoff',
       data: {
-        task: "Process workload transfer from US-EAST to US-WEST on 2026-10-04 under 8000 USD",
-        scenario_id: "agent_route_us",
+        task: "Book me the cheapest flight from Mumbai to Delhi under ₹6000",
+        scenario_id: "flight_booking",
         failure_type: "wrong_parameter",
         expected_culprit_step: 3,
         status: "failure",
         steps: [
-          { n: 1, name: "parse_query", kind: "llm", ms: 95, st: "ok", inp: { raw: "Process workload transfer from US-EAST to US-WEST under 8000 USD" }, out: { intent: "workload_transfer", source: "US-EAST", target: "US-WEST", max_cost: 8000 } },
-          { n: 2, name: "plan_execution", kind: "llm", ms: 110, st: "ok", inp: { intent: "workload_transfer" }, out: { task_plan: { from: "US-EAST", to: "US-WEST", max_cost: 8000 } } },
-          { n: 3, name: "fetch_data", kind: "tool", ms: 240, st: "ok", inp: { query: { from: "US-EAST", to: "EU-CENTRAL", date: "2026-10-04" } }, out: { query: { from: "US-EAST", to: "EU-CENTRAL" }, results: [{ id: "NODE-204", source: "US-EAST", target: "EU-CENTRAL", price: 5400 }] } },
-          { n: 4, name: "filter_records", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "NODE-204", price: 5400 }], max_cost: 8000 }, out: { selected_record: { id: "NODE-204", source: "US-EAST", target: "EU-CENTRAL", price: 5400 } } },
-          { n: 5, name: "validate_constraints", kind: "tool", ms: 130, st: "ok", inp: { record_id: "NODE-204" }, out: { record_id: "NODE-204", available: true, capacity: 4 } },
-          { n: 6, name: "compute_metrics", kind: "tool", ms: 60, st: "ok", inp: { base: 5400 }, out: { base: 5400, overhead: 648, total: 6048 } },
-          { n: 7, name: "execute_action", kind: "tool", ms: 190, st: "failed", inp: { record_id: "NODE-204", source: "US-EAST", target: "EU-CENTRAL", total: 6048 }, out: { source: "US-EAST", target: "EU-CENTRAL", total: 6048, status: "rejected", error: "PRE_EXECUTION_GUARDRAIL_BLOCKED" } },
-          { n: 8, name: "summarize", kind: "llm", ms: 140, st: "failed", inp: {}, out: { error: "Execution halted: Dispatched target EU-CENTRAL deviates from requested US-WEST" } }
+          { n: 1, name: "understand_request", kind: "llm", ms: 95, st: "ok", inp: { request: "Book me the cheapest flight from Mumbai to Delhi under ₹6000" }, out: { origin: "BOM", destination: "DEL", max_budget: 6000 } },
+          { n: 2, name: "plan_trip", kind: "llm", ms: 110, st: "ok", inp: { origin: "BOM", destination: "DEL", max_budget: 6000 }, out: { plan: ["search_flights", "filter_by_budget", "check_availability", "calculate_price", "book_flight"] } },
+          { n: 3, name: "search_flights", kind: "tool", ms: 240, st: "ok", inp: { from: "BOM", to: "BLR", date: "2026-10-04" }, out: { query: { from: "BOM", to: "BLR" }, results: [{ id: "AI-202", from: "BOM", to: "BLR", price: 4200, airline: "Air India" }], warning: "queried destination BLR != DEL" } },
+          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "AI-202", price: 4200 }], max_budget: 6000 }, out: { selected: { id: "AI-202", from: "BOM", to: "BLR", price: 4200 } } },
+          { n: 5, name: "check_availability", kind: "tool", ms: 130, st: "ok", inp: { flight_id: "AI-202" }, out: { flight_id: "AI-202", available: true, seats_remaining: 4 } },
+          { n: 6, name: "calculate_price", kind: "tool", ms: 60, st: "ok", inp: { base: 4200, tax_rate: 0.15 }, out: { base: 4200, taxes: 630, total: 4830 } },
+          { n: 7, name: "book_flight", kind: "tool", ms: 190, st: "ok", inp: { flight_id: "AI-202", passenger: "Chirag Patel", total: 4830 }, out: { pnr: "PNR-AI9021", status: "issued_with_destination_error", target_airport: "BLR" } },
+          { n: 8, name: "summarize", kind: "llm", ms: 140, st: "failed", inp: { pnr: "PNR-AI9021" }, out: { error: "ASSERTION_VIOLATION", message: "Execution failed: Booked flight destination BLR contradicts user request DEL (Mumbai to Delhi)." } }
         ]
       }
     },
@@ -479,8 +479,9 @@ export default function App() {
   const [tour, setTour] = useState(null)
 
   const [demoActive, setDemoActive] = useState(true)
-  const [demoScenario, setDemoScenario] = useState('wrong_parameter')
+  const [demoScenario, setDemoScenario] = useState('flight_booking')
   const [demoStep, setDemoStep] = useState(1)
+  const [showAnalogyModal, setShowAnalogyModal] = useState(false)
 
   const onSelectScenario = scId => {
     setDemoScenario(scId)
@@ -684,6 +685,13 @@ export default function App() {
         <div className="btn-group">
           <button
             className="btn sec sm mono"
+            onClick={() => setShowAnalogyModal(true)}
+            title="Why Flight Booking? The Black Box Analogy & Judge Guide"
+          >
+            <Icon n="flight_takeoff" /> JUDGE GUIDE
+          </button>
+          <button
+            className="btn sec sm mono"
             onClick={handleNewRandomRun}
             title="Generate a random multi-domain agent trace"
           >
@@ -718,6 +726,7 @@ export default function App() {
         onExecuteFix={onExecuteFix}
         goToPage={setPage}
         onResetDemo={onResetDemo}
+        onOpenAnalogy={() => setShowAnalogyModal(true)}
       />
 
       <nav aria-label="Main sections">
@@ -744,6 +753,7 @@ export default function App() {
             onOpenStartModal={() => setShowStartModal(true)}
             onOpenImportModal={() => setShowImportModal(true)}
             onRandomRun={handleNewRandomRun}
+            onOpenAnalogyModal={() => setShowAnalogyModal(true)}
             onRefreshRuns={onRefreshRuns}
             onInvestigate={id => { setRid(id); setPage('Investigate') }}
             onReplay={(id, step) => onReplayFrom(id, step)}
@@ -849,6 +859,136 @@ export default function App() {
           setMsg={setMsg}
         />
       )}
+
+      {showAnalogyModal && (
+        <JudgeGuideModal onClose={() => setShowAnalogyModal(false)} />
+      )}
+    </div>
+  )
+}
+
+function JudgeGuideModal({ onClose }) {
+  return (
+    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Why Flight Booking? The Black Box Analogy">
+      <div className="modal-card" style={{ maxWidth: 680, maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon n="flight_takeoff" />
+            <span>Why Flight Booking? The Black Box Analogy</span>
+          </div>
+          <button className="btn sm sec" onClick={onClose} aria-label="Close modal">✕</button>
+        </div>
+
+        <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+          <div className="call" style={{ borderColor: 'var(--ac)', background: 'rgba(255,255,255,0.03)', marginBottom: 14 }}>
+            <div className="eb" style={{ color: 'var(--ac)', marginBottom: 4 }}>ONE-LINE PITCH FOR JUDGES</div>
+            <p style={{ margin: 0, color: '#ffffff', fontSize: 13.5, fontWeight: 600 }}>
+              “When an AI agent fails after many steps, we find which step actually caused it, prove it with evidence, and test a fix without re-running everything.”
+            </p>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div className="eb">SHORT ANSWER</div>
+            <p style={{ margin: '4px 0 0' }}>
+              The project is about <b>AI agents, not airplanes</b>. <i>"Flight recorder"</i> is an analogy, and the flight-booking scenario in this demo is just an intuitive example task for the agent.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div className="eb">THE ANALOGY</div>
+            <p className="mu" style={{ margin: '4px 0 0' }}>
+              When a plane crashes, investigators use the black box (flight recorder) to see what happened in the minutes before. Black Box does the exact same for an AI agent: it records everything the agent did, so when the agent fails you can find out why.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div className="eb">WHAT AN "AI AGENT" IS</div>
+            <p className="mu" style={{ margin: '4px 0 6px' }}>
+              An AI agent is an AI program that completes a task by doing many steps in a row. For example, <i>“Book me the cheapest flight from Mumbai to Delhi under ₹6000”</i> becomes:
+            </p>
+            <ol style={{ paddingLeft: 18, margin: 0, color: 'var(--tx)', fontFamily: 'var(--fm)', fontSize: 12 }}>
+              <li>1. Understand the request (LLM)</li>
+              <li>2. Plan the trip (LLM)</li>
+              <li>3. Search flights (calls a tool) <span className="pill bad" style={{ fontSize: 10, marginLeft: 4 }}>Culprit: queried BLR instead of DEL</span></li>
+              <li>4. Filter by budget (LLM)</li>
+              <li>5. Check availability (calls a tool)</li>
+              <li>6. Calculate the price (calls a tool)</li>
+              <li>7. Book it (calls a tool)</li>
+              <li>8. Summarize (LLM) <span className="pill bad" style={{ fontSize: 10, marginLeft: 4 }}>Failure surfaced here</span></li>
+            </ol>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div className="eb">THE PROBLEM: SILENT UPSTREAM PROPAGATION</div>
+            <p className="mu" style={{ margin: '4px 0 0' }}>
+              Sometimes the agent fails at step 8, but the real mistake happened earlier. Say step 3 searched for the wrong city (Bengaluru instead of Delhi). Steps 4 to 7 then looked "successful" while building on that mistake, and the failure only showed at the end. In real production systems an agent can run thousands of times with dozens of steps each, so humans cannot read through them all to find where it went wrong.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div className="eb">WHAT BLACK BOX DOES (PROBLEM STATEMENT MAPPING)</div>
+            <div className="scroll" style={{ marginTop: 8 }}>
+              <table style={{ width: '100%', fontSize: 11.5, borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--ln)', textAlign: 'left' }}>
+                    <th style={{ padding: '6px 8px', color: 'var(--mu)' }}>Feature in Problem</th>
+                    <th style={{ padding: '6px 8px', color: 'var(--mu)' }}>In Simple Words</th>
+                    <th style={{ padding: '6px 8px', color: 'var(--mu)' }}>How Black Box Maps</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Execution Data</td>
+                    <td style={{ padding: '6px 8px' }}>Record every step of every run (inputs, outputs, errors, timing)</td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Recording stored in Supabase / SQLite</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Failure Diagnosis</td>
+                    <td style={{ padding: '6px 8px' }}>ML model pointing to the step most likely to have caused failure</td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Random Forest in ml/ (Top-1 localization 95%)</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Failure Explanation</td>
+                    <td style={{ padding: '6px 8px' }}>Show proof from recorded data for why it blames that step</td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Investigate evidence panel & invariant rules</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Checkpointed Replay</td>
+                    <td style={{ padding: '6px 8px' }}>Save state after each step, restart from middle</td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Replay engine (checkpoint memory reuse)</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Alternative Execution</td>
+                    <td style={{ padding: '6px 8px' }}>Change suspect step and re-run from there to verify fix</td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Counterfactual override & outcome verification</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Model Evaluation</td>
+                    <td style={{ padding: '6px 8px' }}>Measure accuracy including unseen failure types</td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Evaluation page (Top-1 95%, MRR 1.000)</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Trace Comparison</td>
+                    <td style={{ padding: '6px 8px' }}>Put original run and fixed run side by side</td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Compare page (shared prefix & diff metrics)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <div className="eb">WHY FLIGHTS, THEN?</div>
+            <p className="mu" style={{ margin: '4px 0 0' }}>
+              You need some task for the agent to perform, and flight booking is universally understood in seconds: it has clear steps, tools, and obvious ways to go wrong. You could swap it for hotel booking, customer support refund, cloud infrastructure, or a lakehouse ETL pipeline, and the Black Box system works the exact same way. That is why the failure scenarios in the project are really different types of agent mistakes (wrong parameter, filtering wrongly, stale data, calculation error), not anything about airplanes.
+            </p>
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn pri sm" onClick={onClose}>Close Guide</button>
+        </div>
+      </div>
     </div>
   )
 }

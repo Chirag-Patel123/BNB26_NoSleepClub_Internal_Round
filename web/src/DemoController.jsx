@@ -2,6 +2,21 @@ import { useState } from 'react'
 import { Icon } from './ui.jsx'
 
 export const DEMO_SCENARIOS = {
+  flight_booking: {
+    id: 'flight_booking',
+    name: '00 // Flight Booking (Mumbai → Delhi Route Bug)',
+    badge: 'FLAGSHIP DEMO // ANALOGY',
+    originStep: 3,
+    originTool: 'search_flights',
+    crashStep: 8,
+    crashTool: 'summarize',
+    originExplanation: 'Step 3 (search_flights) searched destination "BLR" (Bengaluru) instead of requested "DEL" (Delhi). Steps 4-7 proceeded blindly on this error.',
+    crashExplanation: 'Step 8 assertion failure: Booked destination BLR contradicts requested destination DEL.',
+    mlInsight: 'Black Box ML ranked Step 3 (search_flights) with 96% confidence: detected destination parameter mismatch against initial user request.',
+    fixPayload: '{"destination": "DEL", "city": "Delhi"}',
+    fixCheckpoint: 2,
+    fixDescription: 'Branch at Checkpoint 2 and correct search destination to DEL (Delhi).'
+  },
   wrong_parameter: {
     id: 'wrong_parameter',
     name: '01 // Parameter Deviation (Target Cluster Mismatch)',
@@ -121,7 +136,8 @@ export default function DemoController({
   setDemoStep,
   onExecuteFix,
   goToPage,
-  onResetDemo
+  onResetDemo,
+  onOpenAnalogy
 }) {
   const [minimized, setMinimized] = useState(false)
   const sc = DEMO_SCENARIOS[currentScenario] || DEMO_SCENARIOS.calculation_error
@@ -171,6 +187,9 @@ export default function DemoController({
         </div>
 
         <div className="demo-deck-controls">
+          <button className="btn sec sm mono" onClick={onOpenAnalogy} title="Why Flight Booking? The Black Box Analogy & Judge Pitch">
+            <Icon n="help_outline" /> JUDGE PITCH
+          </button>
           <div className="demo-select-wrap">
             <label htmlFor="demo-sc-select" className="sr-only">Choose Demo Scenario</label>
             <select
