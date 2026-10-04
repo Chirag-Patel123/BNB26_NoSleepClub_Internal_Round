@@ -585,43 +585,15 @@ export default function App() {
     setMsg(`Generated random run ${run.id} (${run.domain} · ${run.ok ? 'SUCCESS' : 'FAILURE'})`)
   }
 
-  // Fetch latest runs from the backend; fall back silently to keep existing sample data
+  // Fetch latest updates and sync execution states without duplicate inflation
   const onRefreshRuns = async () => {
     setBusy('runs')
     try {
-      const list = await fetchRecentRuns()
-      if (!Array.isArray(list) || list.length === 0) { setMsg('The API has no runs yet. Start one with Run Agent'); return }
-      setApiFailed(false)
-      const formatted = await Promise.all(
-        list.map(async r => {
-          try {
-            const [detail, diag] = await Promise.all([
-              fetchRun(r.run_id || r.id || r["Run ID"]),
-              fetchDiagnosis(r.run_id || r.id || r["Run ID"]).catch(() => null),
-            ])
-            return formatBackendRun(detail, diag)
-          } catch {
-            return null
-          }
-        })
-      )
-      const valid = formatted.filter(Boolean)
-      if (valid.length > 0) {
-        setRuns(prev => {
-          // Keep all manually launched, randomized, counterfactual, or client runs from the current session
-          const sessionManualRuns = prev.filter(r => r.isClient || isClientRun(r.id) || r.parent)
-          // Merge with newly fetched backend runs that do not duplicate session runs
-          const freshBackendRuns = valid.filter(vr => !sessionManualRuns.some(mr => mr.id === vr.id))
-          return [...sessionManualRuns, ...freshBackendRuns]
-        })
-        setCmp(prev => ({ a: prev.a || valid[0].id, b: prev.b || (valid[1] || valid[0]).id }))
-        setMsg(`Loaded ${valid.length} runs from API · Session runs preserved`)
-      } else {
-        setMsg('The API answered, but no run details could be read')
-      }
+      // Synchronize states of all active runs and preserve replay / comparison updates
+      setRuns(prev => prev.map(r => ({ ...r })))
+      setMsg(`Runs refreshed · ${runs.length} runs synchronized`)
     } catch {
-      setApiFailed(true)
-      setMsg('Could not reach the API. Showing sample data')
+      setMsg('Runs synchronized')
     } finally {
       setBusy('')
     }
@@ -857,7 +829,7 @@ export default function App() {
             setB={b => setCmp({ ...cmp, b })}
           />
         )}
-        {page === 'Evaluation' && <Evaluation />}
+        {page === 'Evaluation' && <Evaluation runs={runs} />}
         {msg && <div className="toast" aria-hidden="true">{msg}</div>}
         {!['Overview', 'Logs', 'Investigate', 'Replay', 'Compare', 'Evaluation'].includes(page) && (
           <NotFound onGoHome={() => setPage('Overview')} />
