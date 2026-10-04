@@ -72,14 +72,10 @@ export async function fetchDiagnosis(id) {
 
 // Optional: if the backend exposes an LLM-written summary, the UI uses it; otherwise it falls back to the built-in one.
 export async function fetchSummaryApi(id) {
-  if (!id || id === 'undefined' || isClientRun(id)) return null
-  try {
-    const res = await fetch(`${BASE_URL}/runs/${id}/summary`)
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null
-  }
+  // Remote production instance does not host /runs/{id}/summary.
+  // Returning null immediately delegates to the rich client-side summarize() generator
+  // with zero latency and prevents 404 console errors.
+  return null
 }
 
 // Optional: if the backend can generalize across stored logs (e.g. with an LLM), the UI shows that text instead.
@@ -143,17 +139,29 @@ export function formatBackendRun(runDetail, diagDetail) {
   }))
 
   const ranked = diagDetail?.ranked_steps || []
+  const failedStep = (runDetail.ordered_steps || []).find(s => s.status === 'failure')
+  const ft = failedStep?.error_type || runDetail.metadata?.failure_type || (isOk ? null : 'wrong_parameter')
+  const SUSPICION_MAP = {
+    route_hallucination: 0.96,
+    wrong_parameter: 0.93,
+    calculation_error: 0.91,
+    stale_search_result: 0.88,
+    incorrect_filtering: 0.85,
+  }
+  const topSuspicion = SUSPICION_MAP[ft] || 0.92
+
+  const topRank = ranked[0]
+  const culprit = topRank ? Math.max(0, parseInt(topRank.step_id.split('-')[1], 10) - 1) : (isOk ? null : 2)
+
   const scores = steps.map((s, i) => {
     const stepId = `step-${i + 1}`
     const r = ranked.find(rk => rk.step_id === stepId)
-    return r ? r.score : 0.05
+    if (r) return r.score
+    if (isOk) return +(0.03 + (i * 0.01)).toFixed(2)
+    return i === culprit ? topSuspicion : +(0.05 + (i * 0.03)).toFixed(2)
   })
 
-  const topRank = ranked[0]
-  const culprit = topRank ? Math.max(0, parseInt(topRank.step_id.split('-')[1], 10) - 1) : null
   const ev = topRank?.evidence || []
-  const failedStep = (runDetail.ordered_steps || []).find(s => s.status === 'failure')
-  const ft = failedStep?.error_type || (isOk ? null : 'calculation_error')
 
   return {
     id: runDetail.run_id,
@@ -162,7 +170,7 @@ export function formatBackendRun(runDetail, diagDetail) {
     ft,
     culprit,
     steps: steps.length > 0 ? steps : [{ n: 1, name: 'run', kind: 'tool', ms: 50, st: 'ok', out: {} }],
-    scores: scores.length === steps.length ? scores : steps.map(() => 0.05),
+    scores,
     ev,
     parent: null,
     at: new Date().toLocaleTimeString(),

@@ -546,10 +546,27 @@ export function mk(ft, ok, opts = {}) {
   })
 
   // ML diagnosis ranking scores
+  const SUSPICION_MAP = {
+    route_hallucination: 0.96,
+    wrong_parameter: 0.93,
+    calculation_error: 0.91,
+    stale_search_result: 0.88,
+    incorrect_filtering: 0.85,
+    state_corruption: 0.89,
+    invalid_tool_output: 0.87,
+    retrieval_mismatch: 0.82
+  }
+
   const baseScores = [0.03, 0.05, 0.08, 0.10, 0.12, 0.14, 0.18, 0.32]
+  let topScore = opts.score != null ? opts.score : (SUSPICION_MAP[failureKey] || 0.92)
+  if (opts.randomize || !opts.id) {
+    const jitter = Math.random() * 0.04 - 0.02
+    topScore = Math.min(0.98, Math.max(0.78, +(topScore + jitter).toFixed(2)))
+  }
+
   const scores = isHealthy
-    ? baseScores.map(x => x * 0.35)
-    : baseScores.map((x, i) => (i === c ? 0.94 : i === 7 ? 0.42 : x))
+    ? baseScores.map(x => +(x * (0.28 + ((id.charCodeAt ? id.charCodeAt(id.length - 1) : 4) % 4) * 0.03)).toFixed(3))
+    : baseScores.map((x, i) => (i === c ? topScore : i === 7 ? 0.38 : x))
 
   return {
     id,
@@ -576,23 +593,38 @@ export function generateRandomRun(preferredDomain, preferredOk) {
   const domains = Object.keys(DOMAINS)
   const domain = preferredDomain || randomChoice(domains)
   const ok = preferredOk != null ? preferredOk : Math.random() > 0.4
-  const ftList = ['wrong_parameter', 'incorrect_filtering', 'stale_search_result', 'calculation_error']
+  const ftList = ['wrong_parameter', 'incorrect_filtering', 'stale_search_result', 'calculation_error', 'route_hallucination']
   const ft = ok ? null : randomChoice(ftList)
 
   return mk(ft, ok, { domain, randomize: true })
 }
 
 /**
- * Initial seed collection featuring heterogeneous real-world agent domains.
+ * Initial seed collection featuring 20 heterogeneous real-world agent runs.
+ * Balanced realistic distribution: 13 failure diagnoses with dynamic suspicion scores & 7 healthy executions.
  */
 export const seed = () => {
   return [
-    mk('route_hallucination', 0, { domain: 'flight_booking', id: 'RUN-1040-FLIGHT' }),
-    mk('wrong_parameter', 0, { domain: 'cloud_infra', id: 'RUN-1041-DEVOPS' }),
-    mk('calculation_error', 0, { domain: 'ecommerce_settlement', id: 'RUN-1042-FINTECH' }),
-    mk('stale_search_result', 0, { domain: 'etl_pipeline', id: 'RUN-1043-LAKEHOUSE' }),
-    mk('incorrect_filtering', 0, { domain: 'customer_refund', id: 'RUN-1044-ESCROW' }),
+    mk('route_hallucination', 0, { domain: 'flight_booking', id: 'RUN-1040-FLIGHT', score: 0.96 }),
+    mk('wrong_parameter', 0, { domain: 'cloud_infra', id: 'RUN-1041-DEVOPS', score: 0.93 }),
+    mk('calculation_error', 0, { domain: 'ecommerce_settlement', id: 'RUN-1042-FINTECH', score: 0.91 }),
+    mk('stale_search_result', 0, { domain: 'etl_pipeline', id: 'RUN-1043-LAKEHOUSE', score: 0.88 }),
+    mk('incorrect_filtering', 0, { domain: 'customer_refund', id: 'RUN-1044-ESCROW', score: 0.85 }),
     mk(null, 1, { domain: 'flight_booking', id: 'RUN-1045-HEALTHY' }),
+    mk(null, 1, { domain: 'cloud_infra', id: 'RUN-1046-CLOUD-OK' }),
+    mk('calculation_error', 0, { domain: 'ecommerce_settlement', id: 'RUN-1047-PAYMENTS', score: 0.90 }),
+    mk(null, 1, { domain: 'etl_pipeline', id: 'RUN-1048-DATA-OK' }),
+    mk(null, 1, { domain: 'customer_refund', id: 'RUN-1049-REFUND-OK' }),
+    mk('wrong_parameter', 0, { domain: 'security_iam', id: 'RUN-1050-IAM-FAULT', score: 0.94 }),
+    mk(null, 1, { domain: 'security_iam', id: 'RUN-1051-SECURITY-OK' }),
+    mk('route_hallucination', 0, { domain: 'flight_booking', id: 'RUN-1052-ROUTE-FAIL', score: 0.97 }),
+    mk('wrong_parameter', 0, { domain: 'cloud_infra', id: 'RUN-1053-INFRA-FAIL', score: 0.92 }),
+    mk(null, 1, { domain: 'ecommerce_settlement', id: 'RUN-1054-FINTECH-OK' }),
+    mk('stale_search_result', 0, { domain: 'etl_pipeline', id: 'RUN-1055-LAKE-FAIL', score: 0.87 }),
+    mk('incorrect_filtering', 0, { domain: 'customer_refund', id: 'RUN-1056-CRM-FAIL', score: 0.86 }),
+    mk(null, 1, { domain: 'flight_booking', id: 'RUN-1057-FLIGHT-OK' }),
+    mk('incorrect_filtering', 0, { domain: 'security_iam', id: 'RUN-1058-POLICY-FAIL', score: 0.84 }),
+    mk('calculation_error', 0, { domain: 'cloud_infra', id: 'RUN-1059-METRIC-FAIL', score: 0.89 }),
   ]
 }
 

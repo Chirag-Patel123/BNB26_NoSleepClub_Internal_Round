@@ -607,9 +607,15 @@ export default function App() {
       )
       const valid = formatted.filter(Boolean)
       if (valid.length > 0) {
-        setRuns(valid)
-        setCmp({ a: valid[0].id, b: (valid[1] || valid[0]).id })
-        setMsg(`Loaded ${valid.length} runs from API`)
+        setRuns(prev => {
+          // Keep all manually launched, randomized, counterfactual, or client runs from the current session
+          const sessionManualRuns = prev.filter(r => r.isClient || isClientRun(r.id) || r.parent)
+          // Merge with newly fetched backend runs that do not duplicate session runs
+          const freshBackendRuns = valid.filter(vr => !sessionManualRuns.some(mr => mr.id === vr.id))
+          return [...sessionManualRuns, ...freshBackendRuns]
+        })
+        setCmp(prev => ({ a: prev.a || valid[0].id, b: prev.b || (valid[1] || valid[0]).id }))
+        setMsg(`Loaded ${valid.length} runs from API · Session runs preserved`)
       } else {
         setMsg('The API answered, but no run details could be read')
       }
@@ -744,11 +750,13 @@ export default function App() {
             className={`btn sm ${demoActive ? 'pri' : 'sec'} mono`}
             onClick={() => setDemoActive(!demoActive)}
             title="Toggle Demo Mode"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}
           >
-            {demoActive ? '● DEMO ACTIVE' : '○ DEMO MODE'}
+            <span className={`dot ${demoActive ? 'static-glow' : 'dimmed'}`} style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block' }} />
+            {demoActive ? 'DEMO ACTIVE' : 'DEMO MODE'}
           </button>
           <button className="btn sec sm mono" onClick={startTour}><Icon n="explore" /> TOUR</button>
-          <span className="pill mono"><span className={`dot ${live ? 'ok' : 'wn'}`} /> {live ? 'LIVE API' : 'SAMPLE'}</span>
+          <span className="pill mono"><span className={`dot ${live ? 'ok pulse-live' : 'wn'}`} /> {live ? 'LIVE API' : 'SAMPLE'}</span>
         </div>
       </header>
 

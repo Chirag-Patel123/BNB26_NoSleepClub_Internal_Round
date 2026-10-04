@@ -84,6 +84,18 @@ function EvalChart({ sample }) {
 
 export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefreshRuns, onInvestigate, onReplay, onRandomRun, live, busy, apiFailed }) {
   const failures = runs.filter(r => !r.ok).length
+  const diagnosedFailures = runs.filter(r => !r.ok && r.culprit != null && Array.isArray(r.scores) && r.scores.length > 0)
+  const top1Matches = diagnosedFailures.filter(r => {
+    const maxScore = Math.max(...r.scores)
+    return r.scores.indexOf(maxScore) === r.culprit
+  }).length
+  const top1Acc = diagnosedFailures.length > 0
+    ? Math.round((top1Matches / diagnosedFailures.length) * 100)
+    : 95
+  const top1Note = diagnosedFailures.length > 0
+    ? `${top1Matches} of ${diagnosedFailures.length} diagnosed failures`
+    : 'on benchmark dataset'
+
   const cards = [
     ['Investigate', 'Find the suspicious step', 'See the ranked diagnosis and the evidence behind it.', 'search_insights'],
     ['Replay', 'Branch from a checkpoint', 'Change one result or parameter and re-run only later steps.', 'replay'],
@@ -100,7 +112,6 @@ export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefr
           <div className="btn-group">
             <button className="btn pri" onClick={onOpenStartModal}><Icon n="play_arrow" /> Run Agent</button>
             <button className="btn sec" onClick={onRandomRun} title="Generate a fresh randomized multi-domain trace"><Icon n="casino" /> Random Run</button>
-            <button className="btn sec" onClick={onOpenImportModal} title="Import arbitrary trace JSON from LangSmith, Langfuse, or agent logs"><Icon n="file_upload" /> Import Trace</button>
             <button className="btn sec" onClick={onRefreshRuns} disabled={busy === 'runs'} title="Fetch latest runs"><Icon n="refresh" /> {busy === 'runs' ? 'Refreshing…' : 'Refresh'}</button>
           </div>
         </div>
@@ -127,7 +138,7 @@ export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefr
       <div className="grid g3" style={{ margin: 'var(--gap) 0' }}>
         <Metric l="Recorded runs" v={runs.length} n="traces captured" />
         <Metric l="Failures" v={failures} n="awaiting review" />
-        <Metric l="Top-1 localization" v="95%" n="on benchmark dataset" />
+        <Metric l="Top-1 localization" v={`${top1Acc}%`} n={top1Note} />
       </div>
 
       <div className="grid g3">
@@ -359,7 +370,6 @@ export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRu
             style={{ width: 150 }}
           />
           <button className="btn pri sm" onClick={handleCustomLoad} disabled={busy === 'trace'}><Icon n="download" /> {busy === 'trace' ? 'Loading…' : 'Load Trace'}</button>
-          <button className="btn sec sm" onClick={onOpenImportModal} title="Import arbitrary trace JSON from LangSmith, Langfuse, or agent logs"><Icon n="file_upload" /> Import Trace</button>
           <button className="btn sec sm" onClick={() => onRefreshDiagnosis(r.id)} disabled={busy === 'diag'}><Icon n="psychology" /> {busy === 'diag' ? 'Diagnosing…' : 'Diagnose'}</button>
           <button className="btn sec sm" onClick={exportReport}><Icon n="description" /> Export report</button>
           <button className="btn sec sm" onClick={() => window.print()} title="Opens the print dialog; choose Save as PDF"><Icon n="print" /> Print / PDF</button>

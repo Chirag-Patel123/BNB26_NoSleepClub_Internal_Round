@@ -14,6 +14,25 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
+    <script>
+      // Suppress noisy third-party browser extension errors (e.g. SingleFile 'save-page', extension media play interruptions)
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event && event.reason) {
+          var msg = String(event.reason.message || event.reason);
+          if (msg.includes('save-page') || msg.includes('play() request was interrupted') || msg.includes('menu item with id')) {
+            event.preventDefault();
+            return;
+          }
+        }
+      });
+      window.addEventListener('error', function(event) {
+        var msg = String(event && event.message || '');
+        if (msg.includes('save-page') || msg.includes('menu item with id')) {
+          event.preventDefault();
+        }
+      });
+    </script>
+
     <!-- Open Graph / Social -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://bnb-26-no-sleep-club-internal-round.vercel.app/" />
