@@ -25,14 +25,27 @@ export async function fetchRecentRuns() {
 export function isClientRun(id) {
   if (!id || typeof id !== 'string') return true
   const upper = id.toUpperCase()
-  return (
+  if (
     upper.startsWith('RUN-') ||
     upper.startsWith('R-') ||
     upper.startsWith('IMP-') ||
     upper.startsWith('SYN-') ||
+    upper.startsWith('ALT-') ||
+    upper.startsWith('TRC_') ||
+    upper.startsWith('TRC-') ||
+    upper.startsWith('TRACE') ||
+    upper.startsWith('SPAN') ||
     upper === 'UNDEFINED' ||
     upper === 'NULL'
-  )
+  ) {
+    return true
+  }
+  // Standard UUID format (8-4-4-4-12 hex). Backend runs on Railway are generated with uuid.uuid4()
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  if (!isUuid && id !== 'run-123' && id !== 'run-456') {
+    return true
+  }
+  return false
 }
 
 export async function fetchRun(id) {

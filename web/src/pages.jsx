@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Graph from './Graph.jsx'
 import { Icon, Metric, Pill, PageHead, RunSelect, Select, BlackBoxBadge } from './ui.jsx'
 import { FT, EVAL_ROWS } from './data.js'
-import { fetchEvaluationReport, fetchSummaryApi, fetchLogsSummaryApi } from './api.js'
+import { fetchEvaluationReport, fetchSummaryApi, fetchLogsSummaryApi, isClientRun } from './api.js'
 import { summarize, buildReport, downloadText, logsDigest, buildLogsReport } from './summary.js'
 
 const Calls = ({ children, color }) => <div className="call" style={color ? { borderColor: color } : undefined}>{children}</div>
@@ -295,7 +295,7 @@ export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRu
   useEffect(() => { setHl(null) }, [r.id])
   useEffect(() => {
     setAi(null)
-    if (!live || r.ok || !r.id || r.id.startsWith("R-") || r.id.startsWith("IMP-")) return undefined
+    if (!live || r.ok || !r.id || isClientRun(r.id)) return undefined
     let off = false
     fetchSummaryApi(r.id).then(d => { if (!off && d && typeof d.summary === 'string') setAi(d.summary) }).catch(() => {})
     return () => { off = true }

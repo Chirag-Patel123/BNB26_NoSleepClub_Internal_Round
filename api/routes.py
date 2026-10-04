@@ -216,7 +216,16 @@ def get_run(run_id: str):
         }
 
     r_up = run_id.upper()
-    if r_up.startswith("RUN-") or r_up.startswith("R-") or r_up.startswith("IMP-"):
+    if (
+        r_up.startswith("RUN-")
+        or r_up.startswith("R-")
+        or r_up.startswith("IMP-")
+        or r_up.startswith("TRC_")
+        or r_up.startswith("TRC-")
+        or r_up.startswith("ALT-")
+        or r_up.startswith("TRACE")
+        or r_up.startswith("SPAN")
+    ):
         return {
             "run_id": run_id,
             "status": "failure",
@@ -273,8 +282,17 @@ def get_run_diagnosis(run_id: str):
         }
 
     r_up = run_id.upper()
-    if r_up.startswith("RUN-") or r_up.startswith("R-") or r_up.startswith("IMP-"):
-        is_imp = r_up.startswith("IMP-")
+    if (
+        r_up.startswith("RUN-")
+        or r_up.startswith("R-")
+        or r_up.startswith("IMP-")
+        or r_up.startswith("TRC_")
+        or r_up.startswith("TRC-")
+        or r_up.startswith("ALT-")
+        or r_up.startswith("TRACE")
+        or r_up.startswith("SPAN")
+    ):
+        is_imp = r_up.startswith("IMP-") or r_up.startswith("TRC") or r_up.startswith("TRACE")
         return {
             "run_id": run_id,
             "ranked_steps": [
