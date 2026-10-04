@@ -1,4 +1,4 @@
-# Black Box — Autonomous AI Agent Flight Recorder & Causal Debugger
+ï»¿# Black Box - Autonomous AI Agent Observability & Causal Debugger
 
 An observability and causal debugging platform for autonomous agents. Captures deterministic execution traces, isolates faulty upstream steps via ML classifiers, and allows counterfactual replays.
 

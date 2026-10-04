@@ -81,7 +81,7 @@ function EvalChart({ sample }) {
   )
 }
 
-export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefreshRuns, onInvestigate, onReplay, live, busy, apiFailed }) {
+export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefreshRuns, onInvestigate, onReplay, onRandomRun, live, busy, apiFailed }) {
   const failures = runs.filter(r => !r.ok).length
   const cards = [
     ['Investigate', 'Find the suspicious step', 'See the ranked diagnosis and the evidence behind it.', 'search_insights'],
@@ -98,6 +98,7 @@ export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefr
           </div>
           <div className="btn-group">
             <button className="btn pri" onClick={onOpenStartModal}><Icon n="play_arrow" /> Run Agent</button>
+            <button className="btn sec" onClick={onRandomRun} title="Generate a fresh randomized multi-domain trace"><Icon n="casino" /> Random Run</button>
             <button className="btn sec" onClick={onOpenImportModal} title="Import arbitrary trace JSON from LangSmith, Langfuse, or agent logs"><Icon n="file_upload" /> Import Trace</button>
             <button className="btn sec" onClick={onRefreshRuns} disabled={busy === 'runs'} title="Fetch latest runs"><Icon n="refresh" /> {busy === 'runs' ? 'Refreshing…' : 'Refresh'}</button>
           </div>
@@ -141,6 +142,7 @@ export function Overview({ runs, go, onOpenStartModal, onOpenImportModal, onRefr
         <h2 style={{ margin: 0 }}>Recent runs</h2>
         <div className="btn-group">
           <button className="btn pri sm" onClick={onOpenStartModal}><Icon n="add" /> Launch Execution</button>
+          <button className="btn sec sm" onClick={onRandomRun} title="Generate random trace"><Icon n="casino" /> Random Run</button>
           <button className="btn sec sm" onClick={onRefreshRuns} disabled={busy === 'runs'}><Icon n="refresh" /> {busy === 'runs' ? 'Refreshing…' : 'Refresh Runs'}</button>
         </div>
       </div>
@@ -309,28 +311,28 @@ export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRu
   // Derive domain invariants if not present
   const invariants = r.invariants || [
     {
-      name: 'Route Integrity',
-      rule: 'booking.origin == request.origin && booking.dest == request.dest',
+      name: 'Region Target Integrity',
+      rule: 'action.source == request.source && action.target == request.target',
       status: r.ft === 'wrong_parameter' && !r.ok ? 'VIOLATED' : 'PASSED',
-      requested: r.route?.requested ? `${r.route.requested.origin} → ${r.route.requested.destination}` : 'DEL → BLR',
-      actual: r.route?.booking ? `${r.route.booking.origin} → ${r.route.booking.destination}` : (r.ft === 'wrong_parameter' && !r.ok ? 'DEL → BOM' : 'DEL → BLR'),
-      detail: r.ft === 'wrong_parameter' && !r.ok ? 'Hallucinated destination: requested BLR, booked BOM' : 'Route verified'
+      requested: r.route?.requested ? `${r.route.requested.source_region || r.route.requested.origin} → ${r.route.requested.target_region || r.route.requested.destination}` : 'US-EAST → US-WEST',
+      actual: r.route?.action ? `${r.route.action.source_region} → ${r.route.action.target_region}` : (r.route?.booking ? `${r.route.booking.origin} → ${r.route.booking.destination}` : (r.ft === 'wrong_parameter' && !r.ok ? 'US-EAST → EU-CENTRAL' : 'US-EAST → US-WEST')),
+      detail: r.ft === 'wrong_parameter' && !r.ok ? 'Hallucinated target region: requested US-WEST, targeted EU-CENTRAL' : 'Target verified'
     },
     {
-      name: 'Budget Constraint',
-      rule: 'booking.total <= request.max_price',
+      name: 'Budget / Cost Constraint',
+      rule: 'action.total <= request.max_cost',
       status: r.ft === 'incorrect_filtering' && !r.ok ? 'VIOLATED' : 'PASSED',
-      requested: '≤ ₹20,000',
-      actual: r.ft === 'incorrect_filtering' && !r.ok ? '₹29,500' : '₹5,936',
-      detail: r.ft === 'incorrect_filtering' && !r.ok ? 'Exceeds user specified maximum fare' : 'Within budget threshold'
+      requested: '≤ $20,000',
+      actual: r.ft === 'incorrect_filtering' && !r.ok ? '$29,500' : '$5,936',
+      detail: r.ft === 'incorrect_filtering' && !r.ok ? 'Exceeds user specified maximum cost' : 'Within budget threshold'
     },
     {
-      name: 'Fare Non-Negativity',
-      rule: 'booking.total > 0',
+      name: 'Value Non-Negativity',
+      rule: 'action.total > 0',
       status: r.ft === 'calculation_error' && !r.ok ? 'VIOLATED' : 'PASSED',
-      requested: '> 0 INR',
-      actual: r.ft === 'calculation_error' && !r.ok ? '-1240 INR' : '5936 INR',
-      detail: r.ft === 'calculation_error' && !r.ok ? 'Corrupt negative total' : 'Valid invoice'
+      requested: '> 0 USD',
+      actual: r.ft === 'calculation_error' && !r.ok ? '-1240 USD' : '5936 USD',
+      detail: r.ft === 'calculation_error' && !r.ok ? 'Corrupt negative total' : 'Valid metric computation'
     }
   ]
   const hasInvariantViolation = invariants.some(inv => inv.status === 'VIOLATED')
@@ -378,15 +380,15 @@ export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRu
         </>
       )}
 
-      {/* Pre-Booking Domain Guardrails & Invariants Telemetry Card */}
+      {/* Pre-Execution Domain Guardrails & Invariants Telemetry Card */}
       <div className="card" style={{ marginTop: 'var(--gap)', padding: '20px 22px', borderLeft: hasInvariantViolation ? '3px solid var(--bad)' : '3px solid var(--ok)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Icon n="verified_user" /> Pre-Booking Invariants & Domain Guardrails
+              <Icon n="verified_user" /> Pre-Execution Invariants & Domain Guardrails
             </h2>
             <p className="mu" style={{ margin: '4px 0 0', fontSize: '13px' }}>
-              Deterministic safety checks verified prior to payment authorization. Prevents route hallucinations and state corruption.
+              Deterministic safety checks verified prior to action execution. Prevents parameter hallucinations and state corruption.
             </p>
           </div>
           <span className={`pill mono ${hasInvariantViolation ? 'bad' : 'ok'}`}>
@@ -394,36 +396,48 @@ export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRu
           </span>
         </div>
 
-        {/* Route Tracking Pipeline */}
+        {/* Action Tracking Pipeline */}
         {r.route && (
           <div className="grid g4" style={{ marginBottom: 14, background: '#0a0a0a', padding: '12px 14px', borderRadius: '4px', border: '1px solid #1f1f23' }}>
             <div>
-              <div className="mono mu" style={{ fontSize: '11px' }}>01 REQUESTED ROUTE</div>
+              <div className="mono mu" style={{ fontSize: '11px' }}>01 REQUESTED INTENT</div>
               <div style={{ fontWeight: 700, fontSize: '14px', color: '#fff', marginTop: 2 }}>
-                {r.route.requested.origin} → {r.route.requested.destination}
+                {r.route.requested.source_region || r.route.requested.origin} → {r.route.requested.target_region || r.route.requested.destination}
               </div>
-              <div className="mono mu" style={{ fontSize: '11px' }}>Max ₹{r.route.requested.max_price?.toLocaleString()}</div>
+              <div className="mono mu" style={{ fontSize: '11px' }}>Max ${(r.route.requested.max_cost || r.route.requested.max_price)?.toLocaleString()}</div>
             </div>
             <div>
-              <div className="mono mu" style={{ fontSize: '11px' }}>02 SEARCH QUERY</div>
-              <div style={{ fontWeight: 700, fontSize: '14px', color: r.route.searchQuery.destination !== r.route.requested.destination ? '#ff4d4f' : '#fff', marginTop: 2 }}>
-                {r.route.searchQuery.origin} → {r.route.searchQuery.destination}
+              <div className="mono mu" style={{ fontSize: '11px' }}>02 QUERY PAYLOAD</div>
+              <div style={{
+                fontWeight: 700,
+                fontSize: '14px',
+                color: (r.route.searchQuery.target_region || r.route.searchQuery.destination) !== (r.route.requested.target_region || r.route.requested.destination) ? '#ff4d4f' : '#fff',
+                marginTop: 2
+              }}>
+                {r.route.searchQuery.source_region || r.route.searchQuery.origin} → {r.route.searchQuery.target_region || r.route.searchQuery.destination}
               </div>
               <div className="mono mu" style={{ fontSize: '11px' }}>Step 3 Tool Payload</div>
             </div>
             <div>
-              <div className="mono mu" style={{ fontSize: '11px' }}>03 SELECTED CANDIDATE</div>
+              <div className="mono mu" style={{ fontSize: '11px' }}>03 SELECTED RECORD</div>
               <div style={{ fontWeight: 700, fontSize: '14px', color: '#fff', marginTop: 2 }}>
-                {r.route.selectedFlight.carrier || ''} {r.route.selectedFlight.id}
+                {r.route.selectedRecord?.provider || ''} {r.route.selectedRecord?.id}
               </div>
-              <div className="mono mu" style={{ fontSize: '11px' }}>{r.route.selectedFlight.origin} → {r.route.selectedFlight.destination} (₹{r.route.selectedFlight.price?.toLocaleString()})</div>
+              <div className="mono mu" style={{ fontSize: '11px' }}>
+                {r.route.selectedRecord?.source_region || r.route.selectedRecord?.origin} → {r.route.selectedRecord?.target_region || r.route.selectedRecord?.destination} (${r.route.selectedRecord?.price?.toLocaleString()})
+              </div>
             </div>
             <div>
-              <div className="mono mu" style={{ fontSize: '11px' }}>04 BOOKING PAYLOAD</div>
-              <div style={{ fontWeight: 700, fontSize: '14px', color: r.route.booking.destination !== r.route.requested.destination ? '#ff4d4f' : 'var(--ok)', marginTop: 2 }}>
-                {r.route.booking.origin} → {r.route.booking.destination}
+              <div className="mono mu" style={{ fontSize: '11px' }}>04 ACTION PAYLOAD</div>
+              <div style={{
+                fontWeight: 700,
+                fontSize: '14px',
+                color: ((r.route.action || r.route.booking)?.target_region || (r.route.action || r.route.booking)?.destination) !== (r.route.requested.target_region || r.route.requested.destination) ? '#ff4d4f' : 'var(--ok)',
+                marginTop: 2
+              }}>
+                {(r.route.action || r.route.booking)?.source_region || (r.route.action || r.route.booking)?.origin} → {(r.route.action || r.route.booking)?.target_region || (r.route.action || r.route.booking)?.destination}
               </div>
-              <div className="mono mu" style={{ fontSize: '11px' }}>Status: {r.route.booking.status}</div>
+              <div className="mono mu" style={{ fontSize: '11px' }}>Status: {(r.route.action || r.route.booking)?.status}</div>
             </div>
           </div>
         )}
@@ -463,11 +477,11 @@ export function Investigate({ runs, rid, setRid, sel, setSel, onReplay, onLoadRu
 
         {hasInvariantViolation ? (
           <div className="call bad" style={{ marginTop: 12, fontSize: '13px', lineHeight: 1.5 }}>
-            <Icon n="block" /> <b>PRE-BOOKING ACTION BLOCKED:</b> Execution was halted before submitting the booking transaction. Deterministic guardrails detected that destination <b>{r.route?.booking?.destination || 'BOM'}</b> does not match requested destination <b>{r.route?.requested?.destination || 'BLR'}</b>.
+            <Icon n="block" /> <b>PRE-EXECUTION ACTION BLOCKED:</b> Execution was halted before submitting the downstream action. Deterministic guardrails detected that target <b>{(r.route?.action || r.route?.booking)?.target_region || (r.route?.action || r.route?.booking)?.destination || 'EU-CENTRAL'}</b> does not match requested target <b>{r.route?.requested?.target_region || r.route?.requested?.destination || 'US-WEST'}</b>.
           </div>
         ) : (
           <div className="call" style={{ marginTop: 12, borderColor: 'var(--ok-border)', background: 'var(--ok-bg)', fontSize: '13px', lineHeight: 1.5 }}>
-            <Icon n="verified" /> <b>GUARDRAILS SATISFIED:</b> Route, budget, and price invariants verified. Execution was authorized to proceed.
+            <Icon n="verified" /> <b>GUARDRAILS SATISFIED:</b> Target parameters, budget limits, and non-negative constraints verified. Execution was authorized to proceed.
           </div>
         )}
       </div>
@@ -609,10 +623,10 @@ export function Replay({ runs, rid, setRid, cp, setCp, mt, setMt, val, setVal, o
           <div style={{ margin: '10px 0 4px' }}>
             <label style={{ margin: '0 0 6px' }}>Quick Payload Presets</label>
             <div className="btn-group">
-              <button className="btn sm sec" onClick={() => setVal('{"value":{"available":true}}')}>Valid Availability</button>
-              <button className="btn sm sec" onClick={() => setVal('{"value":{"passengers":1}}')}>1 Passenger</button>
-              <button className="btn sm sec" onClick={() => setVal('{"value":{"total":18400}}')}>Valid Price</button>
-              <button className="btn sm sec" onClick={() => setVal('{"value":{"destination":"DEL"}}')}>Airport DEL</button>
+              <button className="btn sm sec" onClick={() => setVal('{"value":{"target_region":"US-WEST"}}')}>Target: US-WEST</button>
+              <button className="btn sm sec" onClick={() => setVal('{"value":{"net_payout":9680,"status":"verified"}}')}>Valid Settlement</button>
+              <button className="btn sm sec" onClick={() => setVal('{"value":{"schema_version":"v2.4","drift":false}}')}>Live Schema v2.4</button>
+              <button className="btn sm sec" onClick={() => setVal('{"value":{"applied_cap":250,"approved":true}}')}>Max Policy Cap</button>
               <button className="btn sm sec" onClick={() => setVal('{}')}>Clear</button>
             </div>
           </div>
@@ -640,14 +654,157 @@ export function Replay({ runs, rid, setRid, cp, setCp, mt, setMt, val, setVal, o
   )
 }
 
+function computeObjectDiff(objA = {}, objB = {}) {
+  const a = objA || {}
+  const b = objB || {}
+  const keys = Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).sort()
+  return keys.map(k => {
+    const hasA = Object.prototype.hasOwnProperty.call(a, k)
+    const hasB = Object.prototype.hasOwnProperty.call(b, k)
+    const valA = a[k]
+    const valB = b[k]
+    if (!hasA && hasB) return { key: k, type: 'added', valA: undefined, valB }
+    if (hasA && !hasB) return { key: k, type: 'deleted', valA, valB: undefined }
+    if (JSON.stringify(valA) !== JSON.stringify(valB)) return { key: k, type: 'modified', valA, valB }
+    return { key: k, type: 'unchanged', valA, valB }
+  })
+}
+
+function StepDiffInspector({ stepA, stepB, stepIndex, isReused, isDivergencePoint, isFixed }) {
+  const [tab, setTab] = useState('output')
+  const diffOut = computeObjectDiff(stepA?.out, stepB?.out)
+  const diffInp = computeObjectDiff(stepA?.inp, stepB?.inp)
+  const currentDiff = tab === 'output' ? diffOut : diffInp
+  const mutatedCount = currentDiff.filter(d => d.type !== 'unchanged').length
+
+  const renderVal = v => {
+    if (v === undefined) return <span className="mu" style={{ fontStyle: 'italic' }}>—</span>
+    if (typeof v === 'object' && v !== null) return JSON.stringify(v)
+    return String(v)
+  }
+
+  return (
+    <div className="diff-panel card" style={{ marginTop: 'var(--gap)' }}>
+      <div className="diff-header">
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span className="mono" style={{ fontSize: 13, fontWeight: 700, color: '#ffffff' }}>
+              STEP {stepIndex + 1}: {stepA?.name || stepB?.name}
+            </span>
+            <span className="pill mono">{stepA?.kind || stepB?.kind}</span>
+            {isReused ? (
+              <span className="pill ok"><Icon n="cached" /> REUSED PREFIX (CACHED)</span>
+            ) : isDivergencePoint ? (
+              <span className="pill wn"><Icon n="call_split" /> DIVERGENCE CHECKPOINT</span>
+            ) : (
+              <span className="pill"><Icon n="restart_alt" /> RE-EXECUTED</span>
+            )}
+            {isFixed && <span className="pill ok"><Icon n="verified" /> INVARIANT RESTORED</span>}
+          </div>
+          <div className="mu" style={{ fontSize: 12, marginTop: 4 }}>
+            {isReused
+              ? 'Identical state prefix directly reused from original execution. Zero new tokens or compute spent.'
+              : isDivergencePoint
+              ? 'Counterfactual intervention applied here. State diverged and propagated downstream.'
+              : 'Re-evaluated downstream step with modified context state.'}
+          </div>
+        </div>
+
+        <div className="btn-group">
+          <button className={`btn sm ${tab === 'output' ? 'pri' : 'sec'}`} onClick={() => setTab('output')}>
+            Output State ({diffOut.filter(d => d.type !== 'unchanged').length} changes)
+          </button>
+          <button className={`btn sm ${tab === 'input' ? 'pri' : 'sec'}`} onClick={() => setTab('input')}>
+            Input Context ({diffInp.filter(d => d.type !== 'unchanged').length} changes)
+          </button>
+        </div>
+      </div>
+
+      <div style={{ margin: '12px 0 6px', display: 'flex', gap: 12, alignItems: 'center', fontSize: 12, flexWrap: 'wrap' }}>
+        <span className="mu">State Mutations:</span>
+        <span className="pill" style={{ background: 'rgba(34, 197, 94, 0.1)', color: 'var(--ok)', border: '1px solid var(--ok-border)' }}>
+          + {currentDiff.filter(d => d.type === 'added').length} added
+        </span>
+        <span className="pill" style={{ background: 'rgba(234, 179, 8, 0.1)', color: 'var(--wn)', border: '1px solid var(--wn-border)' }}>
+          ~ {currentDiff.filter(d => d.type === 'modified').length} modified
+        </span>
+        <span className="pill" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--bad)', border: '1px solid var(--bad-border)' }}>
+          - {currentDiff.filter(d => d.type === 'deleted').length} removed
+        </span>
+        <span className="mu" style={{ marginLeft: 'auto' }}>
+          Step Duration: <span className="mono">{stepA?.ms || 0}ms</span> → <span className="mono">{stepB?.ms || 0}ms</span>
+        </span>
+      </div>
+
+      {mutatedCount === 0 ? (
+        <div className="call" style={{ margin: '8px 0', borderColor: 'var(--ln)', background: '#09090b' }}>
+          <Icon n="done_all" /> No state mutations detected in this step's {tab} payload. States are identical across both runs.
+        </div>
+      ) : (
+        <div className="scroll" style={{ marginTop: 8 }}>
+          <table className="diff-table">
+            <thead>
+              <tr>
+                <th style={{ width: '22%' }}>State Key</th>
+                <th style={{ width: '8%' }}>Diff</th>
+                <th style={{ width: '35%' }}>Run A (Original)</th>
+                <th style={{ width: '35%' }}>Run B (Alternate)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentDiff.map(d => {
+                const rowCls = d.type === 'added' ? 'diff-line-add' : d.type === 'deleted' ? 'diff-line-del' : d.type === 'modified' ? 'diff-line-mod' : ''
+                const badgeSymbol = d.type === 'added' ? '+' : d.type === 'deleted' ? '-' : d.type === 'modified' ? '~' : '='
+                return (
+                  <tr key={d.key} className={rowCls}>
+                    <td className="mono" style={{ fontWeight: 600 }}>{d.key}</td>
+                    <td className="mono" style={{ fontWeight: 700 }}>{badgeSymbol}</td>
+                    <td className="mono" style={{ wordBreak: 'break-word' }}>{renderVal(d.valA)}</td>
+                    <td className="mono" style={{ wordBreak: 'break-word' }}>{renderVal(d.valB)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="grid two" style={{ marginTop: 14 }}>
+        <div>
+          <div className="mu mono" style={{ fontSize: 11, marginBottom: 4 }}>RAW {tab.toUpperCase()} PAYLOAD · RUN A</div>
+          <pre className="diff-code-pre">{JSON.stringify(tab === 'output' ? stepA?.out : stepA?.inp, null, 2)}</pre>
+        </div>
+        <div>
+          <div className="mu mono" style={{ fontSize: 11, marginBottom: 4 }}>RAW {tab.toUpperCase()} PAYLOAD · RUN B</div>
+          <pre className="diff-code-pre">{JSON.stringify(tab === 'output' ? stepB?.out : stepB?.inp, null, 2)}</pre>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Compare({ runs, a, b, setA, setB }) {
   const A = runs.find(x => x.id === a) || runs[0]
   const B = runs.find(x => x.id === b) || runs[1] || runs[0]
   let k = B.parent && B.parent.id === A.id ? B.parent.k : 0
-  if (!(B.parent && B.parent.id === A.id)) while (k < Math.min(A.steps.length, B.steps.length) && JSON.stringify(A.steps[k].out) === JSON.stringify(B.steps[k].out)) k++
+  if (!(B.parent && B.parent.id === A.id)) {
+    while (k < Math.min(A.steps.length, B.steps.length) && JSON.stringify(A.steps[k]?.out) === JSON.stringify(B.steps[k]?.out)) k++
+  }
+
+  const [selStep, setSelStep] = useState(k < B.steps.length ? k : 0)
+
+  useEffect(() => {
+    setSelStep(k < B.steps.length ? k : 0)
+  }, [A.id, B.id, k])
+
   const sum = R => R.steps.reduce((t, x) => t + (x.ms || 0), 0)
-  const d = sum(A) - sum(B)
+  const totalA = sum(A)
+  const totalB = sum(B)
+  const d = totalA - totalB
   const fixed = B.ok && !A.ok
+
+  const tokensSaved = B.parent?.tokensSaved || (k * 380)
+  const latencySaved = B.parent?.latencySavedMs || A.steps.slice(0, k).reduce((t, s) => t + (s.ms || 0), 0)
 
   const swap = () => {
     const tmp = a
@@ -655,52 +812,108 @@ export function Compare({ runs, a, b, setA, setB }) {
     setB(tmp)
   }
 
-  const Col = ({ R }) => (
+  const Col = ({ R, isAlt }) => (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span className="mono mu">{R.id}</span>
+        <div>
+          <span className="mono mu">{R.id}</span>
+          <span className="mono mu" style={{ marginLeft: 8, fontSize: 11 }}>{R.domain || 'custom'}</span>
+        </div>
         <Pill r={R} />
       </div>
-      <div style={{ marginTop: 8 }}>{R.steps.map((s, i) => (
-        <div key={s.n} className={'row ' + (i >= k && B.parent ? 'div' : '')} style={{ cursor: 'default' }}>
-          <div className="n mono">{s.n}</div>
-          <div className="t">{s.name}</div>
-          <span className="mu mono">{s.ms}ms</span>
-          {s.st === 'failed' && <span className="pill bad">failed</span>}
-        </div>
-      ))}</div>
+      <div style={{ marginTop: 8 }}>
+        {R.steps.map((s, i) => {
+          const isDiverged = i >= k && (isAlt || B.parent)
+          const isSelected = i === selStep
+          const cls = 'row ' + (isSelected ? 'sel ' : '') + (isDiverged ? 'div ' : 'reused ')
+          return (
+            <div
+              key={s.n}
+              className={cls}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelStep(i)}
+              onKeyDown={kd(() => setSelStep(i))}
+              title={`Click to inspect diff for step ${s.n}`}
+            >
+              <div className="n mono">{s.n}</div>
+              <div className="t">
+                <b>{s.name}</b>
+                <span className="mu mono" style={{ fontSize: 11, marginLeft: 6 }}>({s.kind})</span>
+              </div>
+              <span className="mu mono">{s.ms}ms</span>
+              {i < k ? (
+                <span className="pill mu" style={{ fontSize: 10 }}>cached</span>
+              ) : isDiverged ? (
+                <span className="pill wn" style={{ fontSize: 10 }}>re-run</span>
+              ) : null}
+              {s.st === 'failed' && <span className="pill bad">failed</span>}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
+
+  const stepA = A.steps[selStep] || A.steps[0]
+  const stepB = B.steps[selStep] || B.steps[0]
 
   return (
     <>
       <PageHead icon="compare_arrows" title="Compare two runs">
-        Shared prefix, where the paths diverge, and whether the final outcome changed.
+        Shared prefix, counterfactual state diff, and verification of failure remediation.
       </PageHead>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <RunSelect label="Original run" value={A.id} runs={runs} onChange={setA} />
+          <RunSelect label="Original run (A)" value={A.id} runs={runs} onChange={setA} />
         </div>
         <button className="btn sec sm" onClick={swap} title="Swap A and B"><Icon n="swap_horiz" /> Swap A/B</button>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <RunSelect label="Alternate run" value={B.id} runs={runs} onChange={setB} />
+          <RunSelect label="Alternate run (B)" value={B.id} runs={runs} onChange={setB} />
         </div>
       </div>
+
       <div className="grid g3" style={{ marginBottom: 12 }}>
-        <Metric l="Shared steps" v={k} n="identical prefix" />
-        <Metric l="Re-executed" v={Math.max(0, B.steps.length - k)} n="after divergence" />
-        <Metric l="Runtime delta" v={Math.abs(d) + ' ms'} n={d > 0 ? 'alternate faster' : d < 0 ? 'alternate slower' : 'same'} />
+        <Metric l="Shared Prefix" v={`${k} steps`} n="reused unchanged" />
+        <Metric l="Re-executed" v={`${Math.max(0, B.steps.length - k)} steps`} n="post-divergence" />
+        <Metric l="Token Economy" v={`~${tokensSaved.toLocaleString()}`} n="tokens saved via cache" />
+        <Metric l="Latency Economy" v={`${latencySaved} ms`} n="compute time saved" />
       </div>
+
       <Calls color={fixed ? 'var(--ok)' : 'var(--wn)'}>
-        <Icon n={fixed ? 'task_alt' : 'compare_arrows'} /> <b>Outcome:</b> {A.ok ? 'Success' : 'Failure'} <Icon n="arrow_forward" /> {B.ok ? 'Success' : 'Failure'}{fixed ? ' — the counterfactual change successfully fixed the run.' : ''}
+        <Icon n={fixed ? 'task_alt' : 'compare_arrows'} /> <b>Outcome Transition:</b>{' '}
+        <span className={`pill ${A.ok ? 'ok' : 'bad'}`}>{A.ok ? 'SUCCESS' : 'FAILURE'}</span>
+        {' '}<Icon n="arrow_forward" />{' '}
+        <span className={`pill ${B.ok ? 'ok' : 'bad'}`}>{B.ok ? 'SUCCESS' : 'FAILURE'}</span>
+        {fixed ? ' — the counterfactual patch eliminated the invariant violation and successfully recovered the execution.' : ''}
+        {B.parent?.patch ? (
+          <div style={{ marginTop: 6, fontSize: 12 }} className="mono mu">
+            Intervention patch: {JSON.stringify(B.parent.patch)}
+          </div>
+        ) : null}
       </Calls>
+
       <div className="card" style={{ margin: 'var(--gap) 0' }}>
         <Graph run={A} /><div style={{ height: 8 }} /><Graph run={B} dim={B.parent ? k : null} />
       </div>
-      <div className="cols"><Col R={A} /><Col R={B} /></div>
+
+      <div className="cols">
+        <Col R={A} isAlt={false} />
+        <Col R={B} isAlt={true} />
+      </div>
+
+      <StepDiffInspector
+        stepA={stepA}
+        stepB={stepB}
+        stepIndex={selStep}
+        isReused={selStep < k}
+        isDivergencePoint={selStep === k && Boolean(B.parent)}
+        isFixed={fixed && selStep >= k && stepB?.st === 'ok' && stepA?.st === 'failed'}
+      />
     </>
   )
 }
+
 
 export function Evaluation() {
   const [report, setReport] = useState(null)

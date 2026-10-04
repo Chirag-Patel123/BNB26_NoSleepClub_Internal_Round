@@ -3,7 +3,7 @@ from typing import Optional
 from .demo_agent import run_agent, to_json
 from .failure_injection import INJECTIONS, FailureConfig
 
-def start_run(scenario_id: str = "flight_basic", seed: int = 42,
+def start_run(scenario_id: str = "agent_basic", seed: int = 42,
               failure_type: Optional[str] = None, target_step: Optional[str] = None) -> dict:
     cfg = None
     if failure_type:

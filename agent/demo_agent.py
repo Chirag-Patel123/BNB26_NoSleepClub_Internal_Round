@@ -29,7 +29,7 @@ STEPS = [  # (type, tool)
 ]
 DEPS = {1: [], 2: ["step-1"], 3: ["step-2"], 4: ["step-3"], 5: ["step-4"],
         6: ["step-5", "step-4"], 7: ["step-6", "step-4"]}
-DEFAULT_TASK = "Find the cheapest flight from Mumbai to Delhi on 2026-10-04 under 6000 INR"
+DEFAULT_TASK = "Execute data processing workflow from US-EAST to US-WEST under 6000 USD"
 
 
 def _latency(seed: int, idx: int) -> int:
@@ -41,7 +41,7 @@ def _latency(seed: int, idx: int) -> int:
 
 
 def _run_step(idx: int, state: dict, task: str, seed: int, fail: Optional[FailureConfig], override,
-              scenario_id: str = "flight_basic"):
+              scenario_id: str = "agent_basic"):
     """Returns (output, new_state, error) where error is (error_type, msg, retries) or None.
 
     `override` = {"step_id": "step-N", "value": {...}} is a counterfactual modification and WINS over any
@@ -136,7 +136,7 @@ def _run_step(idx: int, state: dict, task: str, seed: int, fail: Optional[Failur
 
 
 def run_agent(task: str = DEFAULT_TASK, seed: int = 42, failure: Optional[FailureConfig] = None,
-              scenario_id: str = "flight_basic", run_id: Optional[str] = None,
+              scenario_id: str = "agent_basic", run_id: Optional[str] = None,
               resume_from: Optional[Checkpoint] = None, parent_run_id: Optional[str] = None,
               override: Optional[dict] = None, use_checkpoint_failure: bool = True) -> RunResult:
     """Run (or resume from a checkpoint). `override={"step_id": "step-5", "value": {...}}` patches a tool result."""

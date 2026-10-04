@@ -1,9 +1,10 @@
-<svg xmlns=\http://www.w3.org/2000/svg\ viewBox=\0 0 1200 630\ width=\1200\ height=\630\>
+﻿<svg xmlns=\http://www.w3.org/2000/svg\ viewBox=\0 0 1200 630\ width=\1200\ height=\630\>
  <rect width=\1200\ height=\630\ fill=\#08090e\/>
- <text x=\100\ y=\160\ font-family=\sans-serif\ font-size=\24\ font-weight=\700\ fill=\#ff9d3b\ letter-spacing=\4\>FLIGHT RECORDER &amp; CAUSAL DEBUGGER</text>
+ <text x=\100\ y=\160\ font-family=\sans-serif\ font-size=\24\ font-weight=\700\ fill=\#ff9d3b\ letter-spacing=\4\>AGENT RECORDER &amp; CAUSAL DEBUGGER</text>
  <text x=\100\ y=\250\ font-family=\sans-serif\ font-size=\64\ font-weight=\800\ fill=\#f1f5f9\>BLACK BOX</text>
  <text x=\100\ y=\320\ font-family=\sans-serif\ font-size=\26\ fill=\#94a3b8\>Trace-grounded fault localization and checkpointed replay for autonomous AI agents.</text>
  <rect x=\100\ y=\460\ width=\340\ height=\56\ rx=\10\ fill=\#1e2536\ stroke=\#334155\ stroke-width=\1\/>
  <circle cx=\130\ cy=\488\ r=\8\ fill=\#22c55e\/>
- <text x=\152\ y=\495\ font-family=\monospace\ font-size=\16\ font-weight=\600\ fill=\#e2e8f0\>TELEMETRY ACTIVE � SUPABASE</text>
+ <text x=\152\ y=\495\ font-family=\monospace\ font-size=\16\ font-weight=\600\ fill=\#e2e8f0\>TELEMETRY ACTIVE · SUPABASE</text>
 </svg>
+

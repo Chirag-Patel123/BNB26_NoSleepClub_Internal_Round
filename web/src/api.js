@@ -68,7 +68,7 @@ export async function startNewRun({ scenario_id, failure_type, target_step, seed
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      scenario_id: scenario_id || 'flight_basic',
+      scenario_id: scenario_id || 'agent_basic',
       failure_type: failure_type || null,
       target_step: target_step || null,
       seed: seed != null ? Number(seed) : 42,
@@ -133,7 +133,7 @@ export function formatBackendRun(runDetail, diagDetail) {
 
   return {
     id: runDetail.run_id,
-    sc: runDetail.metadata?.scenario_id || 'flight_basic',
+    sc: runDetail.metadata?.scenario_id || 'agent_basic',
     ok: isOk,
     ft,
     culprit,

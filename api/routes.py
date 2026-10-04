@@ -33,9 +33,9 @@ MOCK_STEP = {
     "parent_step_id": "step-4",
     "step_index": 5,
     "step_type": "tool_call",
-    "input_summary": {"flight_id": "F101"},
+    "input_summary": {"record_id": "REC-101"},
     "output_summary": {"available": False},
-    "state_before": {"selected_flight": "F101"},
+    "state_before": {"selected_record": "REC-101"},
     "state_after": {"availability_checked": False},
     "tool": "validate_availability",
     "model": None,
@@ -209,7 +209,7 @@ def get_run(run_id: str):
         return {
             "run_id": run_id,
             "status": "failure",
-            "metadata": {"scenario_id": "flight_basic", "agent_version": "v1.0"},
+            "metadata": {"scenario_id": "agent_basic", "agent_version": "v1.0"},
             "ordered_steps": [Step(**MOCK_STEP)],
             "checkpoints": [{"checkpoint_id": "ckpt-5", "step_id": "step-5"}],
             "graph_relationships": {"step-4": ["step-5"]}
@@ -219,7 +219,7 @@ def get_run(run_id: str):
         return {
             "run_id": run_id,
             "status": "failure",
-            "metadata": {"scenario_id": "flight_basic", "agent_version": "v1.0"},
+            "metadata": {"scenario_id": "agent_basic", "agent_version": "v1.0"},
             "ordered_steps": [Step(**MOCK_STEP)],
             "checkpoints": [{"checkpoint_id": "ckpt-5", "step_id": "step-5"}],
             "graph_relationships": {"step-4": ["step-5"]}
@@ -345,9 +345,9 @@ def import_trace(payload: dict):
                     "step_id": "step-3",
                     "score": 0.94,
                     "evidence": [
-                        "search_flights query destination ('BOM') deviates from requested journey destination ('BLR')",
-                        "Candidate selection accepted flight 6E-204 (DEL -> BOM)",
-                        "Pre-booking invariant violated: booking.destination != request.destination"
+                        "fetch_data query target ('EU-CENTRAL') deviates from requested target ('US-WEST')",
+                        "Candidate selection accepted record NODE-204 (US-EAST -> EU-CENTRAL)",
+                        "Pre-execution invariant violated: action.target != request.target"
                     ]
                 }
             ],

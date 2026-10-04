@@ -872,7 +872,7 @@ tr:hover td {
 }
 
 /* ==========================================================================
-   BLACKED THEME: AUSTERE FLIGHT RECORDER DEMO DECK
+   BLACKED THEME: AUSTERE AGENT RECORDER DEMO DECK
    ========================================================================== */
 
 .demo-deck {
@@ -1118,4 +1118,89 @@ tr:hover td {
 
 .demo-main-cta:hover {
   background: #e4e4e7 !important;
+}
+
+/* Diff & State Inspection Styles */
+.row.div {
+  border-left: 3px solid var(--wn);
+  background: rgba(234, 179, 8, 0.05);
+}
+
+.row.div:hover {
+  background: rgba(234, 179, 8, 0.1);
+}
+
+.row.reused {
+  opacity: 0.75;
+}
+
+.diff-panel {
+  border: var(--bd);
+  background: var(--s1);
+  border-radius: var(--r);
+  padding: 16px;
+  margin-top: var(--gap);
+}
+
+.diff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ln);
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--fm);
+  font-size: 12px;
+}
+
+.diff-table th,
+.diff-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #1a1a1e;
+  vertical-align: top;
+}
+
+.diff-table th {
+  color: var(--mu);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #09090b;
+}
+
+.diff-line-add {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.diff-line-del {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+.diff-line-mod {
+  background: rgba(234, 179, 8, 0.12);
+  color: #fde047;
+}
+
+.diff-code-pre {
+  margin: 0;
+  padding: 10px 12px;
+  background: #050505;
+  border: 1px solid var(--ln);
+  border-radius: var(--r-sm);
+  font-family: var(--fm);
+  font-size: 11.5px;
+  line-height: 1.45;
+  overflow-x: auto;
+  max-height: 260px;
+  color: #e4e4e7;
 }

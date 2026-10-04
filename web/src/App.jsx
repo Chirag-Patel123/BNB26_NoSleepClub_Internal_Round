@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { seed, replayRun, mk } from './data.js'
+import { seed, replayRun, mk, generateRandomRun } from './data.js'
 import { Icon } from './ui.jsx'
 import DemoController, { DEMO_SCENARIOS, DEMO_STEPS } from './DemoController.jsx'
 import { Overview, Logs, Investigate, Replay, Compare, Evaluation } from './pages.jsx'
@@ -31,26 +31,26 @@ const TOUR = [
   ['Evaluation', 'Trust the model', 'How accurately the model finds the failing step, including failure types it never saw in training.'],
 ]
 
-const SCENARIOS = ['flight_basic', 'flight_complex', 'flight_route_del_blr', 'hotel_basic', 'multi_hop']
+const SCENARIOS = ['agent_basic', 'agent_complex', 'agent_route_us', 'data_pipeline_basic', 'multi_hop']
 const FAILURE_TYPES = ['', 'wrong_parameter', 'stale_search_result', 'incorrect_filtering', 'calculation_error']
 
 const EVIDENCE_MAP = {
   wrong_parameter: [
-    'search_flights called with destination="BOM" but the user requested "BLR"',
-    'selected flight route DEL→BOM does not match request',
-    'pre-booking guardrail blocked the booking'
+    'fetch_data called with target="EU-CENTRAL" while user requested "US-WEST"',
+    'selected record route US-EAST→EU-CENTRAL does not match request',
+    'pre-execution guardrail blocked the downstream action'
   ],
   incorrect_filtering: [
-    'filter_by_budget selected a flight priced above the max budget',
+    'filter_records selected a record priced above the max budget',
     'downstream total exceeds budget'
   ],
   stale_search_result: [
-    'search results were served from a stale cache',
-    'availability check contradicts the earlier search result'
+    'query results were served from a stale cache',
+    'capacity check contradicts the earlier search result'
   ],
   calculation_error: [
-    'compute_price total does not equal base + taxes',
-    'booking payload total mismatches the computed price'
+    'compute_metrics total does not equal base + overhead',
+    'action payload total mismatches the computed metric'
   ]
 }
 
@@ -60,23 +60,23 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
 
   const PRESETS = {
     route_hallucination: {
-      name: 'Route Hallucination (Wrong Parameter)',
-      icon: 'route',
+      name: 'Target Parameter Mismatch (Wrong Parameter)',
+      icon: 'alt_route',
       data: {
-        task: "Find the cheapest flight from Delhi (DEL) to Bengaluru (BLR) on 2026-10-04 under 8000 INR",
-        scenario_id: "flight_route_del_blr",
+        task: "Process workload transfer from US-EAST to US-WEST on 2026-10-04 under 8000 USD",
+        scenario_id: "agent_route_us",
         failure_type: "wrong_parameter",
         expected_culprit_step: 3,
         status: "failure",
         steps: [
-          { n: 1, name: "parse_request", kind: "llm", ms: 95, st: "ok", inp: { raw: "Find flight from Delhi to Bengaluru under 8000 INR" }, out: { intent: "find_flight", origin: "DEL", destination: "BLR", max_price: 8000 } },
-          { n: 2, name: "plan_trip", kind: "llm", ms: 110, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "DEL", to: "BLR", max_price: 8000 } } },
-          { n: 3, name: "search_flights", kind: "tool", ms: 240, st: "ok", inp: { query: { from: "DEL", to: "BOM", date: "2026-10-04" } }, out: { query: { from: "DEL", to: "BOM" }, results: [{ id: "6E-204", origin: "DEL", destination: "BOM", price: 5400 }] } },
-          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "6E-204", price: 5400 }], max_price: 8000 }, out: { selected_flight: { id: "6E-204", origin: "DEL", destination: "BOM", price: 5400 } } },
-          { n: 5, name: "check_availability", kind: "tool", ms: 130, st: "ok", inp: { flight_id: "6E-204" }, out: { flight_id: "6E-204", available: true, seats_left: 4 } },
-          { n: 6, name: "compute_price", kind: "tool", ms: 60, st: "ok", inp: { base: 5400 }, out: { base: 5400, taxes: 648, total: 6048 } },
-          { n: 7, name: "book_flight", kind: "tool", ms: 190, st: "failed", inp: { flight_id: "6E-204", origin: "DEL", destination: "BOM", total: 6048 }, out: { origin: "DEL", destination: "BOM", total: 6048, status: "rejected", error: "PRE_BOOKING_GUARDRAIL_BLOCKED" } },
-          { n: 8, name: "summarize", kind: "llm", ms: 140, st: "failed", inp: {}, out: { error: "Execution halted: Booked route DEL -> BOM deviates from requested DEL -> BLR" } }
+          { n: 1, name: "parse_query", kind: "llm", ms: 95, st: "ok", inp: { raw: "Process workload transfer from US-EAST to US-WEST under 8000 USD" }, out: { intent: "workload_transfer", source: "US-EAST", target: "US-WEST", max_cost: 8000 } },
+          { n: 2, name: "plan_execution", kind: "llm", ms: 110, st: "ok", inp: { intent: "workload_transfer" }, out: { task_plan: { from: "US-EAST", to: "US-WEST", max_cost: 8000 } } },
+          { n: 3, name: "fetch_data", kind: "tool", ms: 240, st: "ok", inp: { query: { from: "US-EAST", to: "EU-CENTRAL", date: "2026-10-04" } }, out: { query: { from: "US-EAST", to: "EU-CENTRAL" }, results: [{ id: "NODE-204", source: "US-EAST", target: "EU-CENTRAL", price: 5400 }] } },
+          { n: 4, name: "filter_records", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "NODE-204", price: 5400 }], max_cost: 8000 }, out: { selected_record: { id: "NODE-204", source: "US-EAST", target: "EU-CENTRAL", price: 5400 } } },
+          { n: 5, name: "validate_constraints", kind: "tool", ms: 130, st: "ok", inp: { record_id: "NODE-204" }, out: { record_id: "NODE-204", available: true, capacity: 4 } },
+          { n: 6, name: "compute_metrics", kind: "tool", ms: 60, st: "ok", inp: { base: 5400 }, out: { base: 5400, overhead: 648, total: 6048 } },
+          { n: 7, name: "execute_action", kind: "tool", ms: 190, st: "failed", inp: { record_id: "NODE-204", source: "US-EAST", target: "EU-CENTRAL", total: 6048 }, out: { source: "US-EAST", target: "EU-CENTRAL", total: 6048, status: "rejected", error: "PRE_EXECUTION_GUARDRAIL_BLOCKED" } },
+          { n: 8, name: "summarize", kind: "llm", ms: 140, st: "failed", inp: {}, out: { error: "Execution halted: Dispatched target EU-CENTRAL deviates from requested US-WEST" } }
         ]
       }
     },
@@ -84,20 +84,20 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
       name: 'Incorrect Filtering',
       icon: 'filter_alt',
       data: {
-        task: "Find the cheapest flight from Mumbai (BOM) to Delhi (DEL) on 2026-10-04 under 6000 INR",
-        scenario_id: "flight_basic",
+        task: "Process workload transfer from AP-SOUTH to US-EAST on 2026-10-04 under 6000 USD",
+        scenario_id: "agent_basic",
         failure_type: "incorrect_filtering",
         expected_culprit_step: 4,
         status: "failure",
         steps: [
-          { n: 1, name: "parse_request", kind: "llm", ms: 90, st: "ok", inp: { raw: "Find cheapest flight BOM to DEL under 6000 INR" }, out: { intent: "find_flight", origin: "BOM", destination: "DEL", max_price: 6000 } },
-          { n: 2, name: "plan_trip", kind: "llm", ms: 105, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "BOM", to: "DEL", max_price: 6000 } } },
-          { n: 3, name: "search_flights", kind: "tool", ms: 220, st: "ok", inp: { query: { from: "BOM", to: "DEL", date: "2026-10-04" } }, out: { query: { from: "BOM", to: "DEL" }, results: [{ id: "F101", origin: "BOM", destination: "DEL", price: 5200 }, { id: "F202", origin: "BOM", destination: "DEL", price: 6100 }, { id: "F303", origin: "BOM", destination: "DEL", price: 7500 }] } },
-          { n: 4, name: "filter_by_budget", kind: "llm", ms: 95, st: "ok", inp: { candidates: [{ id: "F101", price: 5200 }, { id: "F202", price: 6100 }, { id: "F303", price: 7500 }], max_budget: 6000 }, out: { selected_flight: { id: "F303", origin: "BOM", destination: "DEL", price: 7500 } } },
-          { n: 5, name: "check_availability", kind: "tool", ms: 125, st: "ok", inp: { flight_id: "F303" }, out: { flight_id: "F303", available: true, seats_left: 3 } },
-          { n: 6, name: "compute_price", kind: "tool", ms: 55, st: "ok", inp: { base: 7500 }, out: { base: 7500, taxes: 900, total: 8400 } },
-          { n: 7, name: "book_flight", kind: "tool", ms: 180, st: "failed", inp: { flight_id: "F303", total: 8400, budget_limit: 6000 }, out: { status: "rejected", error: "BUDGET_EXCEEDED", total: 8400, budget: 6000 } },
-          { n: 8, name: "summarize", kind: "llm", ms: 130, st: "failed", inp: {}, out: { error: "Execution halted: Selected flight F303 total 8400 INR exceeds user budget of 6000 INR" } }
+          { n: 1, name: "parse_query", kind: "llm", ms: 90, st: "ok", inp: { raw: "Process cheapest transfer AP-SOUTH to US-EAST under 6000 USD" }, out: { intent: "workload_transfer", source: "AP-SOUTH", target: "US-EAST", max_cost: 6000 } },
+          { n: 2, name: "plan_execution", kind: "llm", ms: 105, st: "ok", inp: { intent: "workload_transfer" }, out: { task_plan: { from: "AP-SOUTH", to: "US-EAST", max_cost: 6000 } } },
+          { n: 3, name: "fetch_data", kind: "tool", ms: 220, st: "ok", inp: { query: { from: "AP-SOUTH", to: "US-EAST", date: "2026-10-04" } }, out: { query: { from: "AP-SOUTH", to: "US-EAST" }, results: [{ id: "NODE-101", source: "AP-SOUTH", target: "US-EAST", price: 5200 }, { id: "NODE-202", source: "AP-SOUTH", target: "US-EAST", price: 6100 }, { id: "NODE-303", source: "AP-SOUTH", target: "US-EAST", price: 7500 }] } },
+          { n: 4, name: "filter_records", kind: "llm", ms: 95, st: "ok", inp: { candidates: [{ id: "NODE-101", price: 5200 }, { id: "NODE-202", price: 6100 }, { id: "NODE-303", price: 7500 }], max_budget: 6000 }, out: { selected_record: { id: "NODE-303", source: "AP-SOUTH", target: "US-EAST", price: 7500 } } },
+          { n: 5, name: "validate_constraints", kind: "tool", ms: 125, st: "ok", inp: { record_id: "NODE-303" }, out: { record_id: "NODE-303", available: true, capacity: 3 } },
+          { n: 6, name: "compute_metrics", kind: "tool", ms: 55, st: "ok", inp: { base: 7500 }, out: { base: 7500, overhead: 900, total: 8400 } },
+          { n: 7, name: "execute_action", kind: "tool", ms: 180, st: "failed", inp: { record_id: "NODE-303", total: 8400, budget_limit: 6000 }, out: { status: "rejected", error: "BUDGET_EXCEEDED", total: 8400, budget: 6000 } },
+          { n: 8, name: "summarize", kind: "llm", ms: 130, st: "failed", inp: {}, out: { error: "Execution halted: Selected resource NODE-303 total 8400 USD exceeds user budget of 6000 USD" } }
         ]
       }
     },
@@ -105,20 +105,20 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
       name: 'Stale Search Result',
       icon: 'history',
       data: {
-        task: "Find the cheapest flight from Mumbai (BOM) to Delhi (DEL) on 2026-10-04 under 6000 INR",
-        scenario_id: "flight_basic",
+        task: "Process workload transfer from AP-SOUTH to US-EAST on 2026-10-04 under 6000 USD",
+        scenario_id: "agent_basic",
         failure_type: "stale_search_result",
         expected_culprit_step: 3,
         status: "failure",
         steps: [
-          { n: 1, name: "parse_request", kind: "llm", ms: 90, st: "ok", inp: { raw: "Find cheapest flight BOM to DEL under 6000 INR" }, out: { intent: "find_flight", origin: "BOM", destination: "DEL", max_price: 6000 } },
-          { n: 2, name: "plan_trip", kind: "llm", ms: 105, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "BOM", to: "DEL", max_price: 6000 } } },
-          { n: 3, name: "search_flights", kind: "tool", ms: 210, st: "ok", inp: { query: { from: "BOM", to: "DEL", date: "2026-10-04" } }, out: { query: { from: "BOM", to: "DEL" }, stale: true, fetched_at: "2026-10-01T08:00:00Z", results: [{ id: "F101", origin: "BOM", destination: "DEL", price: 5200, available: true }] } },
-          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "F101", price: 5200 }], max_budget: 6000 }, out: { selected_flight: { id: "F101", origin: "BOM", destination: "DEL", price: 5200 } } },
-          { n: 5, name: "check_availability", kind: "tool", ms: 140, st: "failed", inp: { flight_id: "F101" }, out: { flight_id: "F101", available: false, seats_left: 0, error: "SEATS_UNAVAILABLE" } },
-          { n: 6, name: "compute_price", kind: "tool", ms: 45, st: "failed", inp: { flight_id: "F101" }, out: { error: "PRICE_CALCULATION_SKIPPED", message: "Cannot compute price for unavailable flight F101" } },
-          { n: 7, name: "book_flight", kind: "tool", ms: 160, st: "failed", inp: { flight_id: "F101" }, out: { status: "rejected", error: "BOOKING_FAILED_UNAVAILABLE", message: "Flight F101 has 0 seats available" } },
-          { n: 8, name: "summarize", kind: "llm", ms: 120, st: "failed", inp: {}, out: { error: "Execution halted: Flight F101 from stale search cache has no remaining seats" } }
+          { n: 1, name: "parse_query", kind: "llm", ms: 90, st: "ok", inp: { raw: "Process cheapest transfer AP-SOUTH to US-EAST under 6000 USD" }, out: { intent: "workload_transfer", source: "AP-SOUTH", target: "US-EAST", max_cost: 6000 } },
+          { n: 2, name: "plan_execution", kind: "llm", ms: 105, st: "ok", inp: { intent: "workload_transfer" }, out: { task_plan: { from: "AP-SOUTH", to: "US-EAST", max_cost: 6000 } } },
+          { n: 3, name: "fetch_data", kind: "tool", ms: 210, st: "ok", inp: { query: { from: "AP-SOUTH", to: "US-EAST", date: "2026-10-04" } }, out: { query: { from: "AP-SOUTH", to: "US-EAST" }, stale: true, fetched_at: "2026-10-01T08:00:00Z", results: [{ id: "NODE-101", source: "AP-SOUTH", target: "US-EAST", price: 5200, available: true }] } },
+          { n: 4, name: "filter_records", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "NODE-101", price: 5200 }], max_budget: 6000 }, out: { selected_record: { id: "NODE-101", source: "AP-SOUTH", target: "US-EAST", price: 5200 } } },
+          { n: 5, name: "validate_constraints", kind: "tool", ms: 140, st: "failed", inp: { record_id: "NODE-101" }, out: { record_id: "NODE-101", available: false, capacity: 0, error: "CAPACITY_UNAVAILABLE" } },
+          { n: 6, name: "compute_metrics", kind: "tool", ms: 45, st: "failed", inp: { record_id: "NODE-101" }, out: { error: "METRICS_CALCULATION_SKIPPED", message: "Cannot compute metrics for unavailable resource NODE-101" } },
+          { n: 7, name: "execute_action", kind: "tool", ms: 160, st: "failed", inp: { record_id: "NODE-101" }, out: { status: "rejected", error: "ACTION_FAILED_UNAVAILABLE", message: "Resource NODE-101 has 0 capacity available" } },
+          { n: 8, name: "summarize", kind: "llm", ms: 120, st: "failed", inp: {}, out: { error: "Execution halted: Resource NODE-101 from stale search cache has no remaining capacity" } }
         ]
       }
     },
@@ -126,20 +126,20 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
       name: 'Calculation Error',
       icon: 'calculate',
       data: {
-        task: "Find the cheapest flight from Mumbai (BOM) to Delhi (DEL) on 2026-10-04 under 6000 INR",
-        scenario_id: "flight_basic",
+        task: "Process workload transfer from AP-SOUTH to US-EAST on 2026-10-04 under 6000 USD",
+        scenario_id: "agent_basic",
         failure_type: "calculation_error",
         expected_culprit_step: 6,
         status: "failure",
         steps: [
-          { n: 1, name: "parse_request", kind: "llm", ms: 90, st: "ok", inp: { raw: "Find cheapest flight BOM to DEL under 6000 INR" }, out: { intent: "find_flight", origin: "BOM", destination: "DEL", max_price: 6000 } },
-          { n: 2, name: "plan_trip", kind: "llm", ms: 105, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "BOM", to: "DEL", max_price: 6000 } } },
-          { n: 3, name: "search_flights", kind: "tool", ms: 220, st: "ok", inp: { query: { from: "BOM", to: "DEL", date: "2026-10-04" } }, out: { query: { from: "BOM", to: "DEL" }, results: [{ id: "F101", origin: "BOM", destination: "DEL", price: 5200 }] } },
-          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "F101", price: 5200 }], max_budget: 6000 }, out: { selected_flight: { id: "F101", origin: "BOM", destination: "DEL", price: 5200 } } },
-          { n: 5, name: "check_availability", kind: "tool", ms: 130, st: "ok", inp: { flight_id: "F101" }, out: { flight_id: "F101", available: true, seats_left: 5 } },
-          { n: 6, name: "compute_price", kind: "tool", ms: 60, st: "ok", inp: { base: 5200, taxes: 624 }, out: { base: 5200, taxes: 624, total: 4576 } },
-          { n: 7, name: "book_flight", kind: "tool", ms: 175, st: "failed", inp: { flight_id: "F101", expected_total: 5824, computed_total: 4576 }, out: { status: "rejected", error: "PRICE_CALCULATION_MISMATCH", expected: 5824, actual: 4576 } },
-          { n: 8, name: "summarize", kind: "llm", ms: 125, st: "failed", inp: {}, out: { error: "Execution halted: Booking total 4576 INR does not equal base fare 5200 plus taxes 624 (expected 5824 INR)" } }
+          { n: 1, name: "parse_query", kind: "llm", ms: 90, st: "ok", inp: { raw: "Process cheapest transfer AP-SOUTH to US-EAST under 6000 USD" }, out: { intent: "workload_transfer", source: "AP-SOUTH", target: "US-EAST", max_cost: 6000 } },
+          { n: 2, name: "plan_execution", kind: "llm", ms: 105, st: "ok", inp: { intent: "workload_transfer" }, out: { task_plan: { from: "AP-SOUTH", to: "US-EAST", max_cost: 6000 } } },
+          { n: 3, name: "fetch_data", kind: "tool", ms: 220, st: "ok", inp: { query: { from: "AP-SOUTH", to: "US-EAST", date: "2026-10-04" } }, out: { query: { from: "AP-SOUTH", to: "US-EAST" }, results: [{ id: "NODE-101", source: "AP-SOUTH", target: "US-EAST", price: 5200 }] } },
+          { n: 4, name: "filter_records", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "NODE-101", price: 5200 }], max_budget: 6000 }, out: { selected_record: { id: "NODE-101", source: "AP-SOUTH", target: "US-EAST", price: 5200 } } },
+          { n: 5, name: "validate_constraints", kind: "tool", ms: 130, st: "ok", inp: { record_id: "NODE-101" }, out: { record_id: "NODE-101", available: true, capacity: 5 } },
+          { n: 6, name: "compute_metrics", kind: "tool", ms: 60, st: "ok", inp: { base: 5200, overhead: 624 }, out: { base: 5200, overhead: 624, total: 4576 } },
+          { n: 7, name: "execute_action", kind: "tool", ms: 175, st: "failed", inp: { record_id: "NODE-101", expected_total: 5824, computed_total: 4576 }, out: { status: "rejected", error: "METRIC_CALCULATION_MISMATCH", expected: 5824, actual: 4576 } },
+          { n: 8, name: "summarize", kind: "llm", ms: 125, st: "failed", inp: {}, out: { error: "Execution halted: Action total 4576 USD does not equal base rate 5200 plus overhead 624 (expected 5824 USD)" } }
         ]
       }
     },
@@ -147,20 +147,20 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
       name: 'Healthy Run (Success)',
       icon: 'check_circle',
       data: {
-        task: "Find the cheapest flight from Delhi (DEL) to Bengaluru (BLR) on 2026-10-04 under 8000 INR",
-        scenario_id: "flight_route_del_blr",
+        task: "Process workload transfer from US-EAST to US-WEST on 2026-10-04 under 8000 USD",
+        scenario_id: "agent_route_us",
         failure_type: null,
         expected_culprit_step: null,
         status: "success",
         steps: [
-          { n: 1, name: "parse_request", kind: "llm", ms: 95, st: "ok", inp: { raw: "Find flight from Delhi to Bengaluru" }, out: { intent: "find_flight", origin: "DEL", destination: "BLR", max_price: 8000 } },
-          { n: 2, name: "plan_trip", kind: "llm", ms: 110, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "DEL", to: "BLR", max_price: 8000, date: "2026-10-04" } } },
-          { n: 3, name: "search_flights", kind: "tool", ms: 230, st: "ok", inp: { query: { from: "DEL", to: "BLR", date: "2026-10-04" } }, out: { query: { from: "DEL", to: "BLR" }, results: [{ id: "6E-501", origin: "DEL", destination: "BLR", price: 5300 }] } },
-          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "6E-501", price: 5300 }], max_price: 8000 }, out: { selected_flight: { id: "6E-501", origin: "DEL", destination: "BLR", price: 5300 } } },
-          { n: 5, name: "check_availability", kind: "tool", ms: 125, st: "ok", inp: { flight_id: "6E-501" }, out: { flight_id: "6E-501", available: true, seats_left: 6 } },
-          { n: 6, name: "compute_price", kind: "tool", ms: 55, st: "ok", inp: { base: 5300 }, out: { base: 5300, taxes: 636, total: 5936 } },
-          { n: 7, name: "book_flight", kind: "tool", ms: 195, st: "ok", inp: { flight_id: "6E-501", total: 5936 }, out: { origin: "DEL", destination: "BLR", total: 5936, status: "confirmed", pnr: "PNR-BLR-8492" } },
-          { n: 8, name: "summarize", kind: "llm", ms: 120, st: "ok", inp: { booking_status: "confirmed", pnr: "PNR-BLR-8492" }, out: { summary: "Successfully booked flight 6E-501 from Delhi (DEL) to Bengaluru (BLR) for 5936 INR. PNR: PNR-BLR-8492" } }
+          { n: 1, name: "parse_query", kind: "llm", ms: 95, st: "ok", inp: { raw: "Process transfer from US-EAST to US-WEST" }, out: { intent: "workload_transfer", source: "US-EAST", target: "US-WEST", max_cost: 8000 } },
+          { n: 2, name: "plan_execution", kind: "llm", ms: 110, st: "ok", inp: { intent: "workload_transfer" }, out: { task_plan: { from: "US-EAST", to: "US-WEST", max_cost: 8000, date: "2026-10-04" } } },
+          { n: 3, name: "fetch_data", kind: "tool", ms: 230, st: "ok", inp: { query: { from: "US-EAST", to: "US-WEST", date: "2026-10-04" } }, out: { query: { from: "US-EAST", to: "US-WEST" }, results: [{ id: "NODE-501", source: "US-EAST", target: "US-WEST", price: 5300 }] } },
+          { n: 4, name: "filter_records", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "NODE-501", price: 5300 }], max_price: 8000 }, out: { selected_record: { id: "NODE-501", source: "US-EAST", target: "US-WEST", price: 5300 } } },
+          { n: 5, name: "validate_constraints", kind: "tool", ms: 125, st: "ok", inp: { record_id: "NODE-501" }, out: { record_id: "NODE-501", available: true, capacity: 6 } },
+          { n: 6, name: "compute_metrics", kind: "tool", ms: 55, st: "ok", inp: { base: 5300 }, out: { base: 5300, overhead: 636, total: 5936 } },
+          { n: 7, name: "execute_action", kind: "tool", ms: 195, st: "ok", inp: { record_id: "NODE-501", total: 5936 }, out: { source: "US-EAST", target: "US-WEST", total: 5936, status: "confirmed", job_id: "JOB-USWEST-8492" } },
+          { n: 8, name: "summarize", kind: "llm", ms: 120, st: "ok", inp: { execution_status: "confirmed", job_id: "JOB-USWEST-8492" }, out: { summary: "Successfully provisioned resource NODE-501 from US-EAST to US-WEST for 5936 USD. Job ID: JOB-USWEST-8492" } }
         ]
       }
     }
@@ -272,27 +272,27 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
         at: new Date().toLocaleTimeString(),
         ...(ft === 'wrong_parameter' ? {
           route: {
-            requested: { origin: 'DEL', destination: 'BLR', max_price: 8000 },
-            searchQuery: { origin: 'DEL', destination: 'BOM' },
-            selectedFlight: { id: '6E-204', origin: 'DEL', destination: 'BOM', price: 5400, carrier: 'IndiGo' },
-            booking: { origin: 'DEL', destination: 'BOM', status: 'rejected', guardrail_blocked: true }
+            requested: { source_region: 'US-EAST', target_region: 'US-WEST', max_cost: 8000 },
+            searchQuery: { source_region: 'US-EAST', target_region: 'EU-CENTRAL' },
+            selectedRecord: { id: 'NODE-204', source_region: 'US-EAST', target_region: 'EU-CENTRAL', price: 5400, provider: 'CoreInfra' },
+            action: { source_region: 'US-EAST', target_region: 'EU-CENTRAL', status: 'rejected', guardrail_blocked: true }
           },
           invariants: [
             {
-              name: 'Route Integrity',
-              rule: 'booking.origin == request.origin && booking.dest == request.dest',
+              name: 'Region Target Integrity',
+              rule: 'action.source == request.source && action.target == request.target',
               status: 'VIOLATED',
-              requested: 'DEL → BLR',
-              actual: 'DEL → BOM',
-              detail: 'Hallucinated destination: requested BLR, booked BOM'
+              requested: 'US-EAST → US-WEST',
+              actual: 'US-EAST → EU-CENTRAL',
+              detail: 'Hallucinated target: requested US-WEST, dispatched EU-CENTRAL'
             },
             {
-              name: 'Pre-Booking Action Safety',
+              name: 'Pre-Execution Action Safety',
               rule: 'block_action_on_invariant_violation',
               status: 'BLOCKED',
-              requested: 'Authorized payment',
+              requested: 'Authorized execution',
               actual: 'Blocked by Guardrail',
-              detail: 'Execution halted before irreversible booking payload submitted'
+              detail: 'Execution halted before irreversible action payload submitted'
             }
           ]
         } : {})
@@ -317,13 +317,13 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
         </div>
         <div style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <p className="mu" style={{ margin: 0, fontSize: '13px', lineHeight: 1.5 }}>
-            Paste raw traces from <b>LangSmith</b>, <b>Arize Phoenix</b>, <b>Langfuse</b>, OpenTelemetry spans, or your custom flight assistant logs to localize causal faults and verify counterfactual replays.
+            Paste raw traces from <b>LangSmith</b>, <b>Arize Phoenix</b>, <b>Langfuse</b>, OpenTelemetry spans, or your custom AI agent logs to localize causal faults and verify counterfactual replays.
           </p>
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <span className="mono mu" style={{ fontSize: '12px' }}>QUICK PRESETS:</span>
             <button className="btn sec sm mono" onClick={() => loadPreset('route_hallucination')}>
-              <Icon n="route" /> Route Hallucination (Wrong Parameter)
+              <Icon n="alt_route" /> Target Parameter Mismatch (Wrong Parameter)
             </button>
             <button className="btn sec sm mono" onClick={() => loadPreset('incorrect_filtering')}>
               <Icon n="filter_alt" /> Incorrect Filtering
@@ -375,7 +375,7 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
 }
 
 function StartRunModal({ onClose, onCreated, setMsg }) {
-  const [scenario, setScenario] = useState('flight_basic')
+  const [scenario, setScenario] = useState('agent_basic')
   const [failureType, setFailureType] = useState('wrong_parameter')
   const [seedVal, setSeedVal] = useState('42')
   const [busy, setBusy] = useState(false)
@@ -465,7 +465,7 @@ export default function App() {
   const [sel, setSel] = useState(null)
   const [cp, setCp] = useState(2)
   const [mt, setMt] = useState('change_tool_result')
-  const [val, setVal] = useState('{"query":{"from":"DEL","to":"BLR","date":"2026-10-04"}}')
+  const [val, setVal] = useState('{"value":{"target_region":"US-WEST"}}')
   const [cmp, setCmp] = useState({ a: runs[0].id, b: runs[4].id })
   const [msg, setMsg] = useState('')
   const [showStartModal, setShowStartModal] = useState(false)
@@ -536,7 +536,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    document.title = `${page} — Black Box AI Flight Recorder`
+    document.title = `${page} — Black Box AI Agent Recorder`
     const metaDesc = document.querySelector('meta[name="description"]')
     if (metaDesc && PAGE_DESCRIPTIONS[page]) {
       metaDesc.setAttribute('content', PAGE_DESCRIPTIONS[page])
@@ -549,6 +549,14 @@ export default function App() {
 
   const setRid = id => { setRidState(id); setSel(null) }
   const onReplayFrom = (id, step) => { setRid(id); setCp(step); setPage('Replay') }
+
+  const handleNewRandomRun = () => {
+    const run = generateRandomRun()
+    setRuns(prev => [run, ...prev])
+    setRid(run.id)
+    setCmp(prev => ({ a: run.id, b: prev.a || prev.b }))
+    setMsg(`Generated random run ${run.id} (${run.domain} · ${run.ok ? 'SUCCESS' : 'FAILURE'})`)
+  }
 
   // Fetch latest runs from the backend; fall back silently to keep existing sample data
   const onRefreshRuns = async () => {
@@ -671,9 +679,16 @@ export default function App() {
         <div className="brand">
           <div className="mark"><Icon n="terminal" /></div>
           <span className="brand-name mono">BLACK_BOX</span>
-          <span className="brand-tag mono">FLIGHT_RECORDER</span>
+          <span className="brand-tag mono">AGENT_RECORDER</span>
         </div>
         <div className="btn-group">
+          <button
+            className="btn sec sm mono"
+            onClick={handleNewRandomRun}
+            title="Generate a random multi-domain agent trace"
+          >
+            <Icon n="casino" /> RANDOM RUN
+          </button>
           <button
             className="btn sec sm mono"
             onClick={() => setShowImportModal(true)}
@@ -728,6 +743,7 @@ export default function App() {
             go={setPage}
             onOpenStartModal={() => setShowStartModal(true)}
             onOpenImportModal={() => setShowImportModal(true)}
+            onRandomRun={handleNewRandomRun}
             onRefreshRuns={onRefreshRuns}
             onInvestigate={id => { setRid(id); setPage('Investigate') }}
             onReplay={(id, step) => onReplayFrom(id, step)}

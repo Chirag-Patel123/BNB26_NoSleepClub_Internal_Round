@@ -19,7 +19,7 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
-app = FastAPI(title="Black Box API", description="API for Black Box Agent Flight Recorder", lifespan=lifespan)
+app = FastAPI(title="Black Box API", description="API for Black Box Agent Observability and Causal Debugger", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,

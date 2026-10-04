@@ -1,194 +1,566 @@
-export const STEPS = [['parse_request','llm'],['plan_trip','llm'],['search_flights','tool'],['filter_by_budget','llm'],['check_availability','tool'],['compute_price','tool'],['book_flight','tool'],['summarize','llm']]
+// Diverse real-world agent domains and trace data generator
+
+export const DOMAINS = {
+  cloud_infra: {
+    id: 'cloud_infra',
+    name: 'Cloud Infrastructure Provisioning',
+    badge: 'DEVOPS // CLOUD INFRA',
+    steps: [
+      ['parse_query', 'llm'],
+      ['plan_execution', 'llm'],
+      ['fetch_data', 'tool'],
+      ['filter_records', 'llm'],
+      ['validate_constraints', 'tool'],
+      ['compute_metrics', 'tool'],
+      ['execute_action', 'tool'],
+      ['summarize', 'llm']
+    ]
+  },
+  ecommerce_settlement: {
+    id: 'ecommerce_settlement',
+    name: 'E-Commerce Merchant Settlement',
+    badge: 'FINTECH // PAYMENTS',
+    steps: [
+      ['parse_query', 'llm'],
+      ['resolve_merchant', 'llm'],
+      ['query_ledger', 'tool'],
+      ['filter_eligible', 'llm'],
+      ['verify_escrow', 'tool'],
+      ['calculate_payout', 'tool'],
+      ['execute_transfer', 'tool'],
+      ['summarize', 'llm']
+    ]
+  },
+  etl_pipeline: {
+    id: 'etl_pipeline',
+    name: 'Data Lakehouse Partition Sync',
+    badge: 'DATA // LAKEHOUSE ETL',
+    steps: [
+      ['parse_query', 'llm'],
+      ['plan_pipeline', 'llm'],
+      ['inspect_schema', 'tool'],
+      ['filter_partitions', 'llm'],
+      ['validate_consistency', 'tool'],
+      ['estimate_io_cost', 'tool'],
+      ['execute_sync', 'tool'],
+      ['summarize', 'llm']
+    ]
+  },
+  customer_refund: {
+    id: 'customer_refund',
+    name: 'Customer Support Escrow Refund',
+    badge: 'CRM // ESCROW REFUND',
+    steps: [
+      ['parse_query', 'llm'],
+      ['plan_resolution', 'llm'],
+      ['fetch_ticket_history', 'tool'],
+      ['filter_policy_rules', 'llm'],
+      ['validate_customer_tier', 'tool'],
+      ['calculate_refund', 'tool'],
+      ['credit_account', 'tool'],
+      ['summarize', 'llm']
+    ]
+  },
+  security_iam: {
+    id: 'security_iam',
+    name: 'Zero-Trust IAM Role Provisioning',
+    badge: 'SECURITY // IAM POLICY',
+    steps: [
+      ['parse_query', 'llm'],
+      ['inspect_principal', 'llm'],
+      ['fetch_iam_policies', 'tool'],
+      ['filter_least_privilege', 'llm'],
+      ['validate_mfa_token', 'tool'],
+      ['calculate_session_duration', 'tool'],
+      ['issue_credentials', 'tool'],
+      ['summarize', 'llm']
+    ]
+  }
+}
 
 export const FT = {
   wrong_parameter: {
     c: 2,
-    l: 'Route Hallucination (Wrong Parameter)',
-    badge: 'ROUTE INVARIANT VIOLATION',
+    l: 'Target Key Mismatch (Wrong Parameter)',
+    badge: 'PARAMETER INVARIANT VIOLATION',
+    domain: 'cloud_infra',
     e: [
-      'search_flights called with destination="BOM" while user requested "BLR" (Delhi → Bengaluru).',
-      'Candidate selection accepted flight 6E-204 (DEL → BOM) into execution state.',
-      'Pre-booking invariant violated: booking payload destination (BOM) != requested destination (BLR).'
+      'fetch_data invoked with target_region="EU-CENTRAL" while user requested "US-WEST".',
+      'Record selection accepted resource worker node NODE-204 (US-EAST → EU-CENTRAL) into state.',
+      'Pre-execution invariant violated: action payload target region (EU-CENTRAL) != requested target (US-WEST).'
     ]
   },
   stale_search_result: {
     c: 2,
-    l: 'Stale search result',
+    l: 'Stale Cached Metadata',
     badge: 'RETRIEVAL INVARIANT',
+    domain: 'etl_pipeline',
     e: [
-      'search_flights returned a cached fare dated 3 days earlier (₹18,400 vs live ₹24,900).',
-      'Downstream compute_price reused the stale fare without re-validation.',
-      'Final summary quoted a total that failed the budget check.'
+      'inspect_schema served partition metadata from 3-day-old cache (schema v2.1 vs live v2.4).',
+      'Downstream estimate_io_cost reused stale row counts without schema refresh.',
+      'Validation detected missing partition columns and prevented downstream silent partition corruption.'
     ]
   },
   incorrect_filtering: {
     c: 3,
-    l: 'Incorrect filtering',
-    badge: 'MODEL DECISION',
+    l: 'Policy Filter Relaxation (Model Decision)',
+    badge: 'MODEL DECISION FAILURE',
+    domain: 'customer_refund',
     e: [
-      'filter_by_budget applied max=₹30,000 while the request said ₹20,000.',
-      "State diverged from successful runs: 'budget' changed between step 2 and 4.",
-      'check_availability then confirmed an over-budget flight, so no error was raised.'
+      'filter_policy_rules applied executive approval cap ($500) instead of Tier-1 goodwill limit ($250).',
+      'Selected refund item ($480 monitor) exceeded the user authorized policy limit.',
+      'validate_customer_tier flagged unauthorized policy override before wallet transfer.'
     ]
   },
   calculation_error: {
     c: 5,
-    l: 'Calculation error',
+    l: 'Calculation Error (State Corruption)',
     badge: 'STATE CORRUPTION',
+    domain: 'ecommerce_settlement',
     e: [
-      'compute_price output total=-1240, outside the range seen in all successful runs.',
-      'Inputs (fare, taxes) were valid; the output violated a non-negative invariant.',
-      'book_flight proceeded on the invalid total.'
+      'calculate_payout output net_total=-$1,240 due to fee deduction inverted sign.',
+      'Inputs (gross batch $11,000, fee rate 12%) were valid; output violated non-negative invariant.',
+      'Settlement gateway halted before executing irreversible negative wire transfer.'
     ]
-  },
+  }
 }
 
 let seq = 1040
-export function mk(ft, ok) {
-  const id = 'R-' + ++seq, c = FT[ft]?.c ?? 2
-  const isRouteBug = ft === 'wrong_parameter'
-  
-  // Domain route metadata for flight assistant
-  const requested = isRouteBug
-    ? { origin: 'DEL', destination: 'BLR', max_price: 8000, date: '2026-10-04', pax: 1 }
-    : { origin: 'BOM', destination: 'DEL', max_price: ft === 'incorrect_filtering' ? 20000 : 6000, date: '2026-10-04', pax: 1 }
 
-  const searchQuery = (isRouteBug && !ok)
-    ? { origin: 'DEL', destination: 'BOM', date: '2026-10-04' } // hallucinated BOM destination
-    : { origin: requested.origin, destination: requested.destination, date: requested.date }
+function randomChoice(arr) {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
 
-  const selectedFlight = (isRouteBug && !ok)
-    ? { id: '6E-204', origin: 'DEL', destination: 'BOM', price: 5400, carrier: 'IndiGo' }
-    : (isRouteBug && ok)
-      ? { id: '6E-501', origin: 'DEL', destination: 'BLR', price: 5300, carrier: 'IndiGo' }
-      : (ft === 'incorrect_filtering' && !ok)
-        ? { id: 'AI-802', origin: 'BOM', destination: 'DEL', price: 29500, carrier: 'Air India' }
-        : { id: '6E-101', origin: 'BOM', destination: 'DEL', price: 4800, carrier: 'IndiGo' }
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
 
-  const booking = (isRouteBug && !ok)
-    ? { origin: 'DEL', destination: 'BOM', total: 6048, status: 'rejected', pnr: null, guardrail_blocked: true }
-    : { origin: selectedFlight.origin, destination: selectedFlight.destination, total: ok ? 5936 : (ft === 'calculation_error' ? -1240 : 29500), status: ok ? 'confirmed' : 'rejected', pnr: ok ? `PNR-${selectedFlight.destination}-8492` : null }
+/**
+ * Creates a rich, realistic execution trace across diverse agent domains.
+ */
+export function mk(ft, ok, opts = {}) {
+  const id = opts.id || ('R-' + ++seq)
+  const isHealthy = !!ok
+  const failureKey = isHealthy ? null : (ft || 'wrong_parameter')
+  const c = isHealthy ? null : (FT[failureKey]?.c ?? 2)
 
-  const invariants = [
-    {
-      name: 'Route Integrity',
-      rule: 'booking.origin == request.origin && booking.dest == request.dest',
-      status: (isRouteBug && !ok) ? 'VIOLATED' : 'PASSED',
-      requested: `${requested.origin} → ${requested.destination}`,
-      actual: `${booking.origin} → ${booking.destination}`,
-      detail: (isRouteBug && !ok) ? 'Hallucinated destination: requested BLR, booked BOM' : 'Origin & destination strictly verified'
-    },
-    {
-      name: 'Budget Constraint',
-      rule: 'booking.total <= request.max_price',
-      status: (ft === 'incorrect_filtering' && !ok) ? 'VIOLATED' : 'PASSED',
-      requested: `≤ ₹${requested.max_price.toLocaleString()}`,
-      actual: `₹${booking.total.toLocaleString()}`,
-      detail: (ft === 'incorrect_filtering' && !ok) ? 'Flight ₹29,500 exceeds user budget ₹20,000' : 'Within budget threshold'
-    },
-    {
-      name: 'Non-Negative Price',
-      rule: 'booking.total > 0',
-      status: (ft === 'calculation_error' && !ok) ? 'VIOLATED' : 'PASSED',
-      requested: '> 0 INR',
-      actual: `${booking.total} INR`,
-      detail: (ft === 'calculation_error' && !ok) ? 'Negative invoice total detected' : 'Calculated pricing valid'
+  // Determine domain
+  let domainKey = opts.domain
+  if (!domainKey) {
+    if (isHealthy) domainKey = 'security_iam'
+    else domainKey = FT[failureKey]?.domain || 'cloud_infra'
+  }
+  const domain = DOMAINS[domainKey] || DOMAINS.cloud_infra
+
+  // Domain-specific payloads
+  let task = ''
+  let route = {}
+  let invariants = []
+  let stepsConfig = domain.steps
+
+  if (domainKey === 'cloud_infra') {
+    const isBug = failureKey === 'wrong_parameter'
+    const requested = {
+      source_region: 'US-EAST',
+      target_region: 'US-WEST',
+      max_cost: 8000 + (opts.randomize ? randomInt(0, 5) * 500 : 0),
+      timestamp: '2026-10-04',
+      batch_size: 1
     }
-  ]
+    const searchQuery = (isBug && !isHealthy)
+      ? { source_region: 'US-EAST', target_region: 'EU-CENTRAL', timestamp: '2026-10-04' }
+      : { source_region: requested.source_region, target_region: requested.target_region, timestamp: requested.timestamp }
 
-  const task = isRouteBug
-    ? 'Find the cheapest flight from Delhi (DEL) to Bengaluru (BLR) on 2026-10-04 under 8000 INR'
-    : `Find the cheapest flight from Mumbai (BOM) to Delhi (DEL) on 2026-10-04 under ${requested.max_price} INR`
+    const selectedRecord = (isBug && !isHealthy)
+      ? { id: 'NODE-204', source_region: 'US-EAST', target_region: 'EU-CENTRAL', price: 5400, provider: 'CoreInfra-GPU' }
+      : { id: 'NODE-501', source_region: 'US-EAST', target_region: 'US-WEST', price: 5300, provider: 'CoreInfra-GPU' }
 
-  const steps = STEPS.map((s, i) => {
+    const action = (isBug && !isHealthy)
+      ? { source_region: 'US-EAST', target_region: 'EU-CENTRAL', total: 6048, status: 'rejected', job_id: null, guardrail_blocked: true }
+      : { source_region: selectedRecord.source_region, target_region: selectedRecord.target_region, total: 5936, status: 'confirmed', job_id: `JOB-${selectedRecord.target_region}-8492` }
+
+    task = `Provision GPU compute cluster in US-EAST with failover to US-WEST under $${requested.max_cost.toLocaleString()}`
+    route = { requested, searchQuery, selectedRecord, action }
+
+    invariants = [
+      {
+        name: 'Region Target Integrity',
+        rule: 'action.target == request.target',
+        status: (isBug && !isHealthy) ? 'VIOLATED' : 'PASSED',
+        requested: `${requested.source_region} → ${requested.target_region}`,
+        actual: `${action.source_region} → ${action.target_region}`,
+        detail: (isBug && !isHealthy) ? 'Hallucinated target region: requested US-WEST, targeted EU-CENTRAL' : 'Target region strictly verified'
+      },
+      {
+        name: 'Budget / Cost Ceiling',
+        rule: 'action.total <= request.max_cost',
+        status: 'PASSED',
+        requested: `≤ $${requested.max_cost.toLocaleString()}`,
+        actual: `$${action.total.toLocaleString()}`,
+        detail: 'Within authorized compute budget'
+      },
+      {
+        name: 'Non-Negative Price',
+        rule: 'action.total > 0',
+        status: 'PASSED',
+        requested: '> 0 USD',
+        actual: `${action.total} USD`,
+        detail: 'Valid billing allocation'
+      }
+    ]
+  } else if (domainKey === 'ecommerce_settlement') {
+    const isBug = failureKey === 'calculation_error'
+    const merchantId = opts.randomize ? `M-${randomInt(1000, 9999)}` : 'M-8824'
+    const grossAmount = opts.randomize ? randomInt(10000, 18000) : 11000
+    const requested = { merchant_id: merchantId, max_cap: 15000, currency: 'USD' }
+    const searchQuery = { merchant_id: merchantId, status: 'pending_settlement' }
+    const selectedRecord = { id: `BATCH-${merchantId}`, provider: 'StripeConnect-ACH', price: grossAmount }
+    const netPayout = (isBug && !isHealthy) ? -1240 : (grossAmount - Math.round(grossAmount * 0.12))
+    const action = {
+      merchant_id: merchantId,
+      gross: grossAmount,
+      total: netPayout,
+      status: (isBug && !isHealthy) ? 'rejected' : 'confirmed',
+      job_id: (isBug && !isHealthy) ? null : `WIRE-TX-${randomInt(10000, 99999)}`
+    }
+
+    task = `Settle batch vendor disbursement for merchant #${merchantId} under $${requested.max_cap.toLocaleString()} threshold`
+    route = { requested, searchQuery, selectedRecord, action }
+
+    invariants = [
+      {
+        name: 'Non-Negative Net Disbursement',
+        rule: 'settlement.total > 0',
+        status: (isBug && !isHealthy) ? 'VIOLATED' : 'PASSED',
+        requested: '> $0.00 USD',
+        actual: (isBug && !isHealthy) ? '-$1,240.00 USD' : `$${netPayout.toLocaleString()}.00 USD`,
+        detail: (isBug && !isHealthy) ? 'Corrupted negative invoice amount calculated' : 'Valid positive vendor disbursement'
+      },
+      {
+        name: 'Merchant Payout Cap',
+        rule: 'settlement.total <= request.max_cap',
+        status: 'PASSED',
+        requested: `≤ $${requested.max_cap.toLocaleString()}`,
+        actual: `$${Math.abs(action.total).toLocaleString()}`,
+        detail: 'Within daily payout threshold'
+      },
+      {
+        name: 'Escrow Reserve Ratio',
+        rule: 'escrow.reserve_ratio >= 0.10',
+        status: 'PASSED',
+        requested: '≥ 10%',
+        actual: '15% held in reserve',
+        detail: 'Escrow solvency requirements satisfied'
+      }
+    ]
+  } else if (domainKey === 'etl_pipeline') {
+    const isBug = failureKey === 'stale_search_result'
+    const partitionDate = '2026-10-04'
+    const requested = { partition_date: partitionDate, source_table: 'Events_Lakehouse', max_rows: 500000 }
+    const searchQuery = { partition: partitionDate, cached: isBug && !isHealthy }
+    const selectedRecord = { id: `PART-${partitionDate}`, provider: 'ClickHouse-Cold', price: 2400 }
+    const action = {
+      partition: partitionDate,
+      rows_synced: (isBug && !isHealthy) ? 0 : 382400,
+      total: 2400,
+      status: (isBug && !isHealthy) ? 'rejected' : 'confirmed',
+      job_id: (isBug && !isHealthy) ? null : `SYNC-JOB-${randomInt(1000, 9999)}`
+    }
+
+    task = `Sync analytics partition ${partitionDate} from BigQuery Lakehouse to ClickHouse cold storage`
+    route = { requested, searchQuery, selectedRecord, action }
+
+    invariants = [
+      {
+        name: 'Schema Version Parity',
+        rule: 'metadata.schema_version == live.schema_version',
+        status: (isBug && !isHealthy) ? 'VIOLATED' : 'PASSED',
+        requested: 'Schema v2.4 (Live)',
+        actual: (isBug && !isHealthy) ? 'Schema v2.1 (Stale Cache)' : 'Schema v2.4 (Live)',
+        detail: (isBug && !isHealthy) ? 'Stale metadata snapshot missed 3 newly added schema columns' : 'Metadata snapshot matches live table schema'
+      },
+      {
+        name: 'Partition Boundary Check',
+        rule: 'partition.date == request.partition_date',
+        status: 'PASSED',
+        requested: partitionDate,
+        actual: partitionDate,
+        detail: 'Partition timestamps strictly bounded'
+      },
+      {
+        name: 'Row Count Limit',
+        rule: 'partition.rows <= request.max_rows',
+        status: 'PASSED',
+        requested: '≤ 500,000 rows',
+        actual: `${action.rows_synced.toLocaleString()} rows`,
+        detail: 'Within cluster I/O ingestion threshold'
+      }
+    ]
+  } else if (domainKey === 'customer_refund') {
+    const isBug = failureKey === 'incorrect_filtering'
+    const claimId = opts.randomize ? `CLM-${randomInt(1000, 9999)}` : 'CLM-7712'
+    const requested = { claim_id: claimId, max_goodwill: 250, order_id: 'ORD-9402' }
+    const searchQuery = { claim_id: claimId, customer_tier: 'Standard' }
+    const selectedRecord = { id: 'ITEM-MONITOR-PRO', provider: 'CustomerCredit-Gateway', price: (isBug && !isHealthy) ? 480 : 210 }
+    const action = {
+      claim_id: claimId,
+      total: selectedRecord.price,
+      status: (isBug && !isHealthy) ? 'rejected' : 'confirmed',
+      job_id: (isBug && !isHealthy) ? null : `REFUND-${randomInt(10000, 99999)}`
+    }
+
+    task = `Process customer goodwill refund for claim #${claimId} under $${requested.max_goodwill} policy limit`
+    route = { requested, searchQuery, selectedRecord, action }
+
+    invariants = [
+      {
+        name: 'Goodwill Policy Limit',
+        rule: 'refund.total <= request.max_goodwill',
+        status: (isBug && !isHealthy) ? 'VIOLATED' : 'PASSED',
+        requested: `≤ $${requested.max_goodwill}.00`,
+        actual: `$${action.total}.00`,
+        detail: (isBug && !isHealthy) ? 'LLM relaxed goodwill cap from $250 to $500, approving unauthorized $480 item' : 'Within Tier-1 authorized goodwill limit'
+      },
+      {
+        name: 'Customer KYC Verification',
+        rule: 'customer.is_verified == true',
+        status: 'PASSED',
+        requested: 'Verified Identity',
+        actual: 'Verified Identity',
+        detail: 'Authentication and KYC pass confirmed'
+      },
+      {
+        name: 'Return Window Validity',
+        rule: 'days_since_delivery <= 30',
+        status: 'PASSED',
+        requested: '≤ 30 days',
+        actual: '14 days elapsed',
+        detail: 'Return initiated within policy window'
+      }
+    ]
+  } else {
+    // security_iam (Healthy Run)
+    const principal = 'security-auditor@enterprise.internal'
+    const requested = { principal, role: 'SecOps-Tier2', duration_hours: 24 }
+    const searchQuery = { principal, active_status: true }
+    const selectedRecord = { id: 'ROLE-SECOPS-T2', provider: 'Okta-ZeroTrust-IAM', price: 0 }
+    const action = {
+      principal,
+      role: 'SecOps-Tier2',
+      total: 24,
+      status: 'confirmed',
+      job_id: `JWT-IAM-${randomInt(1000, 9999)}-SEC`
+    }
+
+    task = `Grant temporary 24h audit token to ${principal} under role SecOps-Tier2`
+    route = { requested, searchQuery, selectedRecord, action }
+
+    invariants = [
+      {
+        name: 'Least Privilege Principle',
+        rule: 'role.clearance <= principal.clearance',
+        status: 'PASSED',
+        requested: 'SecOps-Tier2 (Level-3)',
+        actual: 'SecOps-Tier2 (Level-3)',
+        detail: 'Assigned permissions strictly within employee security clearance'
+      },
+      {
+        name: 'MFA Hardware Key Cryptography',
+        rule: 'mfa.hardware_attested == true',
+        status: 'PASSED',
+        requested: 'FIDO2 WebAuthn Key',
+        actual: 'YubiKey-5C Verified',
+        detail: 'Hardware attestation token verified'
+      },
+      {
+        name: 'Token TTL Duration Bound',
+        rule: 'token.duration_hours <= 24',
+        status: 'PASSED',
+        requested: '≤ 24 hours',
+        actual: '24 hours TTL',
+        detail: 'Token automatically invalidates at expiration'
+      }
+    ]
+  }
+
+  // Generate steps
+  const steps = stepsConfig.map((s, i) => {
     let inp = {}
     let out = { ok: true }
+
     if (i === 0) {
-      inp = { raw_prompt: task }
-      out = { intent: 'find_flight', confidence: 0.98 }
+      inp = { prompt: task }
+      out = { intent: domainKey, confidence: 0.99 }
     } else if (i === 1) {
-      inp = { intent: 'find_flight' }
-      out = { journey: requested }
+      inp = { intent: domainKey }
+      out = { plan: route.requested }
     } else if (i === 2) {
-      inp = { query: searchQuery }
-      out = { query: searchQuery, results_count: 3, sample_flights: [selectedFlight] }
+      inp = { query: route.searchQuery }
+      out = failureKey === 'stale_search_result' && !isHealthy
+        ? { cached_snapshot: true, cached_date: '2026-10-01', schema_version: 'v2.1' }
+        : { records: [route.selectedRecord], count: 3 }
     } else if (i === 3) {
-      inp = { candidates: [selectedFlight], max_price: (ft === 'incorrect_filtering' && !ok) ? 30000 : requested.max_price }
-      out = { selected_flight: selectedFlight }
+      inp = { candidates: [route.selectedRecord] }
+      out = failureKey === 'incorrect_filtering' && !isHealthy
+        ? { selected_record: route.selectedRecord, applied_limit: 500, note: 'Threshold relaxed by LLM' }
+        : { selected_record: route.selectedRecord }
     } else if (i === 4) {
-      inp = { flight_id: selectedFlight.id }
-      out = { flight_id: selectedFlight.id, available: true, seats_left: 4 }
+      inp = { item_id: route.selectedRecord.id }
+      out = failureKey === 'stale_search_result' && !isHealthy
+        ? { status: 'failed', error: 'SCHEMA_DRIFT_DETECTED', live_version: 'v2.4' }
+        : { status: 'passed', verified: true }
     } else if (i === 5) {
-      inp = { base_fare: selectedFlight.price, pax: requested.pax }
-      out = { base: selectedFlight.price, taxes: 636, total: (ft === 'calculation_error' && !ok) ? -1240 : selectedFlight.price + 636 }
+      inp = { subtotal: route.selectedRecord.price }
+      out = failureKey === 'calculation_error' && !isHealthy
+        ? { base: 11000, fee: 1320, total: -1240, note: 'Negative sign inversion bug' }
+        : { base: route.selectedRecord.price, overhead: 636, total: route.action.total }
     } else if (i === 6) {
-      inp = { flight: selectedFlight, price: ok ? 5936 : (ft === 'calculation_error' ? -1240 : 6048) }
-      out = booking
+      inp = { action: route.action }
+      out = isHealthy
+        ? { status: 'confirmed', transaction_id: route.action.job_id }
+        : { status: 'rejected', error: 'PRE_EXECUTION_GUARDRAIL_BLOCKED', blocked_at: 'Step 7' }
     } else if (i === 7) {
-      inp = { booking }
-      out = ok ? { summary: `Booked flight ${selectedFlight.id} (${booking.origin} -> ${booking.destination})`, pnr: booking.pnr } : { error: 'Pre-booking guardrail blocked completion', cause_step: c + 1 }
+      inp = { action_result: route.action.status }
+      out = isHealthy
+        ? { summary: `Successfully executed ${domain.name} for ${route.selectedRecord.id}. Transaction: ${route.action.job_id}` }
+        : { error: `Execution halted: Pre-execution invariant violated by Step ${c + 1} (${stepsConfig[c][0]})` }
     }
 
     return {
       n: i + 1,
       name: s[0],
       kind: s[1],
-      ms: 40 + ((i * 37 + seq * 13) % 260),
-      st: !ok && i === 7 ? 'failed' : 'ok',
+      ms: opts.randomize ? randomInt(40, 280) : (45 + ((i * 39 + seq * 17) % 220)),
+      st: !isHealthy && i === 7 ? 'failed' : 'ok',
       inp,
-      out: ok || i !== c ? out : { ...out, note: 'mutated state', suspect: ft }
+      out: isHealthy || i !== c ? out : { ...out, note: 'mutated state', suspect: failureKey }
     }
   })
 
-  const base = [.03, .05, .09, .1, .12, .14, .18, .34]
-  const scores = ok ? base.map(x => x * .4) : base.map((x, i) => (i === c ? .91 : i === 7 ? .41 : x))
+  // ML diagnosis ranking scores
+  const baseScores = [0.03, 0.05, 0.08, 0.10, 0.12, 0.14, 0.18, 0.32]
+  const scores = isHealthy
+    ? baseScores.map(x => x * 0.35)
+    : baseScores.map((x, i) => (i === c ? 0.94 : i === 7 ? 0.42 : x))
+
   return {
     id,
-    sc: isRouteBug ? 'flight_route_del_blr' : 'flight_basic',
+    domain: domainKey,
+    sc: `${domainKey}_scenario`,
     task,
-    ok: !!ok,
-    ft: ok ? null : ft,
-    culprit: ok ? null : c,
+    ok: isHealthy,
+    ft: failureKey,
+    culprit: isHealthy ? null : c,
     steps,
     scores,
-    ev: ok ? [] : (FT[ft]?.e || []),
+    ev: isHealthy ? [] : (FT[failureKey]?.e || []),
     parent: null,
     at: new Date().toLocaleTimeString(),
-    route: { requested, searchQuery, selectedFlight, booking },
+    route,
     invariants
   }
 }
 
-export const seed = () => {
-  const r = [
-    mk('wrong_parameter', 0),    // Delhi -> Bengaluru requested, Delhi -> Mumbai booked (FAILED)
-    mk('incorrect_filtering', 0), // Filter budget ₹20k relaxed to ₹30k (FAILED)
-    mk('stale_search_result', 0), // Stale cached fare ₹18.4k vs live ₹24.9k (FAILED)
-    mk('calculation_error', 0),   // Negative invoice total -1240 (FAILED)
-    mk('wrong_parameter', 1),    // Replayed & verified fix for route hallucination (SUCCESS)
-  ]
-  return r
+/**
+ * Generates an arbitrary new randomized run across any domain.
+ */
+export function generateRandomRun(preferredDomain, preferredOk) {
+  const domains = Object.keys(DOMAINS)
+  const domain = preferredDomain || randomChoice(domains)
+  const ok = preferredOk != null ? preferredOk : Math.random() > 0.4
+  const ftList = ['wrong_parameter', 'incorrect_filtering', 'stale_search_result', 'calculation_error']
+  const ft = ok ? null : randomChoice(ftList)
+
+  return mk(ft, ok, { domain, randomize: true })
 }
 
-// Re-execute only the steps at/after checkpoint `cp`. The change fixes the run if it lands at or before the suspect step.
-export function replayRun(o, cp) {
-  const fixed = o.culprit != null && cp <= o.culprit
-  const ok = fixed || o.ok
-  const n = mk(o.ft || 'wrong_parameter', ok)
-  n.ft = ok ? null : o.ft; n.culprit = ok ? null : o.culprit; n.ev = ok ? [] : o.ev
-  n.steps = o.steps.map((s, i) => (i < cp ? { ...s } : { ...s, ms: s.ms + ((i * 11) % 40) - 20, st: ok ? 'ok' : s.st, out: ok ? { ...s.out, modified: i === cp } : s.out }))
-  n.scores = ok ? o.scores.map((x, i) => (i < cp ? x : x * .3)) : o.scores
-  n.parent = { id: o.id, k: cp }
-  return n
+/**
+ * Initial seed collection featuring heterogeneous real-world agent domains.
+ */
+export const seed = () => {
+  return [
+    mk('wrong_parameter', 0, { domain: 'cloud_infra', id: 'RUN-1041-DEVOPS' }),
+    mk('calculation_error', 0, { domain: 'ecommerce_settlement', id: 'RUN-1042-FINTECH' }),
+    mk('stale_search_result', 0, { domain: 'etl_pipeline', id: 'RUN-1043-LAKEHOUSE' }),
+    mk('incorrect_filtering', 0, { domain: 'customer_refund', id: 'RUN-1044-ESCROW' }),
+    mk(null, 1, { domain: 'security_iam', id: 'RUN-1045-HEALTHY' }),
+  ]
+}
+
+/**
+ * Replays a run from a specified checkpoint with counterfactual fix applied.
+ * Creates rich comparative diff metadata showing prefix reuse and state modifications.
+ */
+export function replayRun(originalRun, cp, patchPayload) {
+  const fixed = originalRun.culprit != null && cp <= originalRun.culprit
+  const ok = fixed || originalRun.ok
+  const alt = mk(originalRun.ft || 'wrong_parameter', ok, {
+    domain: originalRun.domain || 'cloud_infra',
+    id: `ALT-${Date.now().toString().slice(-4)}`
+  })
+
+  alt.ft = ok ? null : originalRun.ft
+  alt.culprit = ok ? null : originalRun.culprit
+  alt.ev = ok ? [] : originalRun.ev
+
+  // Reuse identical prefix from original run (saving token & latency)
+  alt.steps = originalRun.steps.map((s, i) => {
+    if (i < cp) {
+      return {
+        ...s,
+        isReused: true,
+        cached: true
+      }
+    }
+
+    const isIntervention = i === cp
+    const modifiedOut = isIntervention
+      ? {
+          ...s.out,
+          ...(patchPayload?.value || {}),
+          counterfactual_fix: true,
+          intervention_applied_at: `step-${cp + 1}`,
+          original_fault_eliminated: ok
+        }
+      : (ok ? { ...s.out, status: 'confirmed', error: undefined } : s.out)
+
+    return {
+      ...s,
+      ms: Math.max(30, s.ms + ((i * 13) % 40) - 15),
+      st: ok ? 'ok' : s.st,
+      out: modifiedOut,
+      isRecomputed: true
+    }
+  })
+
+  // Calculate comparative token & latency economies
+  const reusedSteps = originalRun.steps.slice(0, cp)
+  const latencySavedMs = reusedSteps.reduce((acc, step) => acc + (step.ms || 0), 0)
+  const tokensSaved = cp * 380
+
+  alt.scores = ok
+    ? originalRun.scores.map((x, i) => (i < cp ? x : x * 0.28))
+    : originalRun.scores
+
+  alt.parent = {
+    id: originalRun.id,
+    k: cp,
+    tokensSaved,
+    latencySavedMs,
+    fixed,
+    patch: patchPayload || null,
+    at: new Date().toLocaleTimeString()
+  }
+
+  return alt
 }
 
 export const EVAL_ROWS = [
-  ['Route Hallucination', 94, 99, 'seen'],
-  ['Stale search result', 91, 100, 'seen'],
-  ['Incorrect filtering', 84, 97, 'seen'],
-  ['Calculation error', 79, 95, 'seen'],
-  ['Wrong parameter', 72, 92, 'seen'],
-  ['Invalid tool output', 67, 88, 'held-out'],
-  ['Retrieval mismatch', 61, 84, 'held-out']
+  ['Target Parameter Mismatch', 94, 99, 'seen'],
+  ['Stale Cached Records', 91, 100, 'seen'],
+  ['Policy Filter Relaxation', 84, 97, 'seen'],
+  ['Invoice Calculation Error', 79, 95, 'seen'],
+  ['Corrupt Execution State', 72, 92, 'seen'],
+  ['Invalid Tool Schema Output', 67, 88, 'held-out'],
+  ['Retrieval Context Mismatch', 61, 84, 'held-out']
 ]
-

@@ -8,17 +8,20 @@ def parse_request(task: str) -> dict:
     return {"intent": "find_flight", "raw": task}
 
 SCENARIOS = {  # scenario_id -> (base max_price, passengers)
+    "agent_basic": (6000, 1),
+    "agent_group": (7500, 3),
+    "agent_tight_budget": (5500, 1),
     "flight_basic": (6000, 1),
     "flight_group": (7500, 3),
     "flight_tight_budget": (5500, 1),
 }
 
-def extract_journey(task: str, scenario_id: str = "flight_basic", seed: int = 42) -> dict:
-    base, pax = SCENARIOS.get(scenario_id, SCENARIOS["flight_basic"])
+def extract_journey(task: str, scenario_id: str = "agent_basic", seed: int = 42) -> dict:
+    base, pax = SCENARIOS.get(scenario_id, SCENARIOS["agent_basic"])
     jitter = _rng(seed, "budget").randrange(0, 5) * 100
     origin = "DEL" if "Delhi" in task or "DEL" in task else "BOM"
     destination = "BLR" if "Bengaluru" in task or "Bangalore" in task or "BLR" in task else ("DEL" if origin != "DEL" else "BOM")
-    if scenario_id == "flight_basic" and "Bengaluru" not in task and "BLR" not in task and "Delhi to" not in task:
+    if "Bengaluru" not in task and "BLR" not in task and "Delhi to" not in task:
         origin, destination = "BOM", "DEL"
     return {"from": origin, "to": destination, "date": "2026-10-04", "max_price": base + jitter, "passengers": pax}
 
@@ -50,3 +53,10 @@ def prepare_booking_payload(flight: dict, price: dict) -> dict:
         "total": price["total"],
         "status": "ready_to_book"
     }
+
+parse_query = parse_request
+fetch_data = search_flights
+filter_records = filter_flights
+validate_constraints = validate_availability
+compute_metrics = calculate_price
+execute_action = prepare_booking_payload

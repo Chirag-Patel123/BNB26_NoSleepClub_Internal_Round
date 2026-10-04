@@ -5,7 +5,7 @@ client = TestClient(app)
 
 def test_start_run():
     response = client.post("/runs", json={
-        "scenario_id": "flight_basic",
+        "scenario_id": "agent_basic",
         "seed": 42,
         "failure_type": "invalid_tool_output",
         "target_step": "step-5"

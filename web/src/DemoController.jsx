@@ -4,63 +4,63 @@ import { Icon } from './ui.jsx'
 export const DEMO_SCENARIOS = {
   wrong_parameter: {
     id: 'wrong_parameter',
-    name: '01 // Route Hallucination (DEL → BLR booked DEL → BOM)',
-    badge: 'ROUTE INVARIANT VIOLATION',
+    name: '01 // Parameter Deviation (Target Cluster Mismatch)',
+    badge: 'SCHEMA INVARIANT VIOLATION',
     originStep: 3,
-    originTool: 'search_flights',
+    originTool: 'fetch_data',
     crashStep: 8,
-    crashTool: 'book_flight / summarize',
-    originExplanation: 'Step 3 (search_flights) mutated destination="BOM" while user explicitly requested "BLR" (Delhi → Bengaluru). The agent selected and prepared booking for Mumbai.',
-    crashExplanation: 'Pre-booking guardrail blocked execution: booking payload destination (BOM) != requested destination (BLR).',
-    mlInsight: 'Random Forest identified parameter deviation between journey plan and search query, ranking Step 3 as the #1 causal root with 94% confidence.',
-    fixPayload: '{"query": {"from": "DEL", "to": "BLR", "date": "2026-10-04"}}',
+    crashTool: 'execute_action / summarize',
+    originExplanation: 'Step 3 (fetch_data) mutated target_partition="AP-SOUTH" while user explicitly requested "US-EAST". The agent selected and prepared operations for the wrong partition.',
+    crashExplanation: 'Pre-execution guardrail blocked execution: payload target (AP-SOUTH) != requested target (US-EAST).',
+    mlInsight: 'Random Forest identified parameter deviation between execution plan and data query, ranking Step 3 as the #1 causal root with 94% confidence.',
+    fixPayload: '{"query": {"source": "US-WEST", "target": "US-EAST"}}',
     fixCheckpoint: 2,
-    fixDescription: 'Branch at Checkpoint 2 and restore the correct destination parameter "BLR".'
+    fixDescription: 'Branch at Checkpoint 2 and restore the correct target parameter "US-EAST".'
   },
   incorrect_filtering: {
     id: 'incorrect_filtering',
     name: '02 // Filter Relaxation (Budget Overflow)',
     badge: 'MODEL DECISION',
     originStep: 4,
-    originTool: 'filter_by_budget',
+    originTool: 'filter_records',
     crashStep: 8,
     crashTool: 'summarize',
-    originExplanation: 'Step 4 relaxed user budget from requested ₹20,000 to ₹30,000, allowing an unaffordable flight into selected state.',
-    crashExplanation: 'Booking finalized on an over-budget ticket, violating the user intent specification.',
-    mlInsight: 'Random Forest detected state anomaly across the journey budget invariant, ranking Step 4 with 89% confidence.',
-    fixPayload: '{"max_price": 20000, "strict": true}',
+    originExplanation: 'Step 4 relaxed user constraint from requested 20,000 to 30,000 units, allowing an invalid record into selected state.',
+    crashExplanation: 'Action finalized on an over-budget record, violating the user intent specification.',
+    mlInsight: 'Random Forest detected state anomaly across the budget invariant, ranking Step 4 with 89% confidence.',
+    fixPayload: '{"max_limit": 20000, "strict": true}',
     fixCheckpoint: 3,
     fixDescription: 'Branch at Checkpoint 3 and enforce strict budget constraint.'
   },
   stale_search_result: {
     id: 'stale_search_result',
-    name: '03 // Stale Cache Fare (Retrieval Failure)',
+    name: '03 // Stale Data Cache (Retrieval Failure)',
     badge: 'RETRIEVAL INVARIANT',
     originStep: 3,
-    originTool: 'search_flights',
+    originTool: 'fetch_data',
     crashStep: 8,
     crashTool: 'summarize',
-    originExplanation: 'Step 3 returned a cached fare dated 3 days earlier (₹18,400 vs live ₹24,900). Downstream steps proceeded without re-validation.',
-    crashExplanation: 'The final budget verification failed at step 8 when reconciling with live booking fares.',
+    originExplanation: 'Step 3 returned cached data dated 3 days earlier (18,400 vs live 24,900 units). Downstream steps proceeded without re-validation.',
+    crashExplanation: 'The final constraint verification failed at step 8 when reconciling with live system records.',
     mlInsight: 'Random Forest flagged unusual latency deviation and downstream context mismatch, pinpointing Step 3 with 94% confidence.',
-    fixPayload: '{"flight_id": "F101", "price": 24900, "live": true}',
+    fixPayload: '{"record_id": "REC-101", "units": 24900, "live": true}',
     fixCheckpoint: 2,
-    fixDescription: 'Branch at Checkpoint 2 and refresh search with live inventory.'
+    fixDescription: 'Branch at Checkpoint 2 and refresh query with live data.'
   },
   calculation_error: {
     id: 'calculation_error',
-    name: '04 // Calculation Error (Negative Price)',
+    name: '04 // Calculation Error (Corrupt Value)',
     badge: 'STATE CORRUPTION',
     originStep: 6,
-    originTool: 'compute_price',
+    originTool: 'compute_metrics',
     crashStep: 8,
     crashTool: 'summarize',
-    originExplanation: 'Step 6 (compute_price) silently produced total = -1240 INR, violating a positive price invariant.',
-    crashExplanation: 'Step 8 (summarize) failed validation when verifying final invoice pricing.',
+    originExplanation: 'Step 6 (compute_metrics) silently produced total = -1240 units, violating a positive value invariant.',
+    crashExplanation: 'Step 8 (summarize) failed validation when verifying final output metrics.',
     mlInsight: 'Random Forest classifier detected state corruption and downstream dependency failure, ranking Step 6 as the #1 culprit with 92% confidence.',
     fixPayload: '{"total": 5936, "base": 5300, "taxes": 636}',
     fixCheckpoint: 5,
-    fixDescription: 'Branch at Checkpoint 5 and provide the non-negative price payload.'
+    fixDescription: 'Branch at Checkpoint 5 and provide the non-negative metric payload.'
   }
 }
 
@@ -166,7 +166,7 @@ export default function DemoController({
       <div className="demo-deck-header">
         <div className="demo-deck-title-group">
           <span className="demo-indicator-dot" />
-          <span className="demo-deck-title mono">DEMO MODE // FLIGHT RECORDER INSPECTION</span>
+          <span className="demo-deck-title mono">DEMO MODE // AGENT OBSERVABILITY INSPECTION</span>
           <span className="demo-badge mono">{sc.badge}</span>
         </div>
 
@@ -230,7 +230,7 @@ export default function DemoController({
               <div className="demo-intel">
                 <span className="demo-intel-label mono">INCIDENT CONTEXT</span>
                 <span className="demo-intel-body">
-                  <b>{sc.name.split('//')[1]?.trim()}:</b> The agent was instructed to finalize a flight booking under budget, but execution failed at the end of the trace.
+                  <b>{sc.name.split('//')[1]?.trim()}:</b> The agent was instructed to execute a multi-step query under strict constraints, but execution failed at the end of the trace.
                 </span>
               </div>
             )}
