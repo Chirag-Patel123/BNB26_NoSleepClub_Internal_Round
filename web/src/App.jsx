@@ -735,13 +735,6 @@ export default function App() {
         <div className="btn-group">
           <button
             className="btn sec sm mono"
-            onClick={handleNewRandomRun}
-            title="Generate a random multi-domain agent trace"
-          >
-            <Icon n="casino" /> RANDOM RUN
-          </button>
-          <button
-            className="btn sec sm mono"
             onClick={() => setShowImportModal(true)}
             title="Import or paste arbitrary JSON trace (LangSmith, Langfuse, OpenTelemetry)"
           >
