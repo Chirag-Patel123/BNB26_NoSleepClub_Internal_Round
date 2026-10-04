@@ -34,43 +34,133 @@ const TOUR = [
 const SCENARIOS = ['flight_basic', 'flight_complex', 'flight_route_del_blr', 'hotel_basic', 'multi_hop']
 const FAILURE_TYPES = ['', 'wrong_parameter', 'stale_search_result', 'incorrect_filtering', 'calculation_error']
 
+const EVIDENCE_MAP = {
+  wrong_parameter: [
+    'search_flights called with destination="BOM" but the user requested "BLR"',
+    'selected flight route DEL→BOM does not match request',
+    'pre-booking guardrail blocked the booking'
+  ],
+  incorrect_filtering: [
+    'filter_by_budget selected a flight priced above the max budget',
+    'downstream total exceeds budget'
+  ],
+  stale_search_result: [
+    'search results were served from a stale cache',
+    'availability check contradicts the earlier search result'
+  ],
+  calculation_error: [
+    'compute_price total does not equal base + taxes',
+    'booking payload total mismatches the computed price'
+  ]
+}
+
 function ImportTraceModal({ onClose, onImported, setMsg }) {
   const [jsonText, setJsonText] = useState('')
   const [error, setError] = useState('')
 
   const PRESETS = {
     route_hallucination: {
-      name: 'Delhi → Bengaluru Hallucination (DEL → BOM booked)',
+      name: 'Route Hallucination (Wrong Parameter)',
+      icon: 'route',
       data: {
         task: "Find the cheapest flight from Delhi (DEL) to Bengaluru (BLR) on 2026-10-04 under 8000 INR",
         scenario_id: "flight_route_del_blr",
-        requested: { origin: "DEL", destination: "BLR", max_price: 8000 },
+        failure_type: "wrong_parameter",
+        expected_culprit_step: 3,
+        status: "failure",
         steps: [
-          { n: 1, name: "parse_request", kind: "llm", ms: 95, inp: { raw: "Find flight from Delhi to Bengaluru" }, out: { intent: "find_flight", origin: "DEL", destination: "BLR" } },
-          { n: 2, name: "plan_trip", kind: "llm", ms: 110, inp: { intent: "find_flight" }, out: { journey: { from: "DEL", to: "BLR", max_price: 8000 } } },
-          { n: 3, name: "search_flights", kind: "tool", ms: 240, inp: { query: { from: "DEL", to: "BOM", date: "2026-10-04" } }, out: { query: { from: "DEL", to: "BOM" }, results: [{ id: "6E-204", origin: "DEL", destination: "BOM", price: 5400 }] } },
-          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, inp: { candidates: [{ id: "6E-204", price: 5400 }] }, out: { selected_flight: { id: "6E-204", origin: "DEL", destination: "BOM", price: 5400 } } },
-          { n: 5, name: "check_availability", kind: "tool", ms: 130, inp: { flight_id: "6E-204" }, out: { flight_id: "6E-204", available: true, seats_left: 4 } },
-          { n: 6, name: "compute_price", kind: "tool", ms: 60, inp: { base: 5400 }, out: { base: 5400, taxes: 648, total: 6048 } },
-          { n: 7, name: "book_flight", kind: "tool", ms: 190, inp: { flight_id: "6E-204" }, out: { origin: "DEL", destination: "BOM", total: 6048, status: "rejected", error: "PRE_BOOKING_GUARDRAIL_BLOCKED" } },
-          { n: 8, name: "summarize", kind: "llm", ms: 140, inp: {}, out: { error: "Execution halted: Booked route DEL -> BOM deviates from requested DEL -> BLR" } }
+          { n: 1, name: "parse_request", kind: "llm", ms: 95, st: "ok", inp: { raw: "Find flight from Delhi to Bengaluru under 8000 INR" }, out: { intent: "find_flight", origin: "DEL", destination: "BLR", max_price: 8000 } },
+          { n: 2, name: "plan_trip", kind: "llm", ms: 110, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "DEL", to: "BLR", max_price: 8000 } } },
+          { n: 3, name: "search_flights", kind: "tool", ms: 240, st: "ok", inp: { query: { from: "DEL", to: "BOM", date: "2026-10-04" } }, out: { query: { from: "DEL", to: "BOM" }, results: [{ id: "6E-204", origin: "DEL", destination: "BOM", price: 5400 }] } },
+          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "6E-204", price: 5400 }], max_price: 8000 }, out: { selected_flight: { id: "6E-204", origin: "DEL", destination: "BOM", price: 5400 } } },
+          { n: 5, name: "check_availability", kind: "tool", ms: 130, st: "ok", inp: { flight_id: "6E-204" }, out: { flight_id: "6E-204", available: true, seats_left: 4 } },
+          { n: 6, name: "compute_price", kind: "tool", ms: 60, st: "ok", inp: { base: 5400 }, out: { base: 5400, taxes: 648, total: 6048 } },
+          { n: 7, name: "book_flight", kind: "tool", ms: 190, st: "failed", inp: { flight_id: "6E-204", origin: "DEL", destination: "BOM", total: 6048 }, out: { origin: "DEL", destination: "BOM", total: 6048, status: "rejected", error: "PRE_BOOKING_GUARDRAIL_BLOCKED" } },
+          { n: 8, name: "summarize", kind: "llm", ms: 140, st: "failed", inp: {}, out: { error: "Execution halted: Booked route DEL -> BOM deviates from requested DEL -> BLR" } }
         ]
       }
     },
-    langsmith_span: {
-      name: 'LangSmith / Phoenix Span Export',
+    incorrect_filtering: {
+      name: 'Incorrect Filtering',
+      icon: 'filter_alt',
       data: {
-        trace_id: "ls-trace-7821",
-        task: "Book Indigo flight Delhi to Bengaluru",
-        spans: [
-          { name: "parse_request", type: "llm", latency_ms: 105, inputs: { query: "DEL to BLR" }, outputs: { dest: "BLR" } },
-          { name: "plan_trip", type: "llm", latency_ms: 120, inputs: {}, outputs: { origin: "DEL", dest: "BLR" } },
-          { name: "search_flights", type: "tool", latency_ms: 310, inputs: { dest: "BOM" }, outputs: { flight: "6E-204", dest: "BOM" } },
-          { name: "filter_by_budget", type: "llm", latency_ms: 90, inputs: {}, outputs: { selected: "6E-204" } },
-          { name: "check_availability", type: "tool", latency_ms: 140, inputs: { id: "6E-204" }, outputs: { available: true } },
-          { name: "compute_price", type: "tool", latency_ms: 80, inputs: {}, outputs: { total: 6048 } },
-          { name: "book_flight", type: "tool", latency_ms: 220, inputs: { dest: "BOM" }, outputs: { status: "rejected" } },
-          { name: "summarize", type: "llm", latency_ms: 110, inputs: {}, outputs: { error: "Route mismatch" } }
+        task: "Find the cheapest flight from Mumbai (BOM) to Delhi (DEL) on 2026-10-04 under 6000 INR",
+        scenario_id: "flight_basic",
+        failure_type: "incorrect_filtering",
+        expected_culprit_step: 4,
+        status: "failure",
+        steps: [
+          { n: 1, name: "parse_request", kind: "llm", ms: 90, st: "ok", inp: { raw: "Find cheapest flight BOM to DEL under 6000 INR" }, out: { intent: "find_flight", origin: "BOM", destination: "DEL", max_price: 6000 } },
+          { n: 2, name: "plan_trip", kind: "llm", ms: 105, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "BOM", to: "DEL", max_price: 6000 } } },
+          { n: 3, name: "search_flights", kind: "tool", ms: 220, st: "ok", inp: { query: { from: "BOM", to: "DEL", date: "2026-10-04" } }, out: { query: { from: "BOM", to: "DEL" }, results: [{ id: "F101", origin: "BOM", destination: "DEL", price: 5200 }, { id: "F202", origin: "BOM", destination: "DEL", price: 6100 }, { id: "F303", origin: "BOM", destination: "DEL", price: 7500 }] } },
+          { n: 4, name: "filter_by_budget", kind: "llm", ms: 95, st: "ok", inp: { candidates: [{ id: "F101", price: 5200 }, { id: "F202", price: 6100 }, { id: "F303", price: 7500 }], max_budget: 6000 }, out: { selected_flight: { id: "F303", origin: "BOM", destination: "DEL", price: 7500 } } },
+          { n: 5, name: "check_availability", kind: "tool", ms: 125, st: "ok", inp: { flight_id: "F303" }, out: { flight_id: "F303", available: true, seats_left: 3 } },
+          { n: 6, name: "compute_price", kind: "tool", ms: 55, st: "ok", inp: { base: 7500 }, out: { base: 7500, taxes: 900, total: 8400 } },
+          { n: 7, name: "book_flight", kind: "tool", ms: 180, st: "failed", inp: { flight_id: "F303", total: 8400, budget_limit: 6000 }, out: { status: "rejected", error: "BUDGET_EXCEEDED", total: 8400, budget: 6000 } },
+          { n: 8, name: "summarize", kind: "llm", ms: 130, st: "failed", inp: {}, out: { error: "Execution halted: Selected flight F303 total 8400 INR exceeds user budget of 6000 INR" } }
+        ]
+      }
+    },
+    stale_search_result: {
+      name: 'Stale Search Result',
+      icon: 'history',
+      data: {
+        task: "Find the cheapest flight from Mumbai (BOM) to Delhi (DEL) on 2026-10-04 under 6000 INR",
+        scenario_id: "flight_basic",
+        failure_type: "stale_search_result",
+        expected_culprit_step: 3,
+        status: "failure",
+        steps: [
+          { n: 1, name: "parse_request", kind: "llm", ms: 90, st: "ok", inp: { raw: "Find cheapest flight BOM to DEL under 6000 INR" }, out: { intent: "find_flight", origin: "BOM", destination: "DEL", max_price: 6000 } },
+          { n: 2, name: "plan_trip", kind: "llm", ms: 105, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "BOM", to: "DEL", max_price: 6000 } } },
+          { n: 3, name: "search_flights", kind: "tool", ms: 210, st: "ok", inp: { query: { from: "BOM", to: "DEL", date: "2026-10-04" } }, out: { query: { from: "BOM", to: "DEL" }, stale: true, fetched_at: "2026-10-01T08:00:00Z", results: [{ id: "F101", origin: "BOM", destination: "DEL", price: 5200, available: true }] } },
+          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "F101", price: 5200 }], max_budget: 6000 }, out: { selected_flight: { id: "F101", origin: "BOM", destination: "DEL", price: 5200 } } },
+          { n: 5, name: "check_availability", kind: "tool", ms: 140, st: "failed", inp: { flight_id: "F101" }, out: { flight_id: "F101", available: false, seats_left: 0, error: "SEATS_UNAVAILABLE" } },
+          { n: 6, name: "compute_price", kind: "tool", ms: 45, st: "failed", inp: { flight_id: "F101" }, out: { error: "PRICE_CALCULATION_SKIPPED", message: "Cannot compute price for unavailable flight F101" } },
+          { n: 7, name: "book_flight", kind: "tool", ms: 160, st: "failed", inp: { flight_id: "F101" }, out: { status: "rejected", error: "BOOKING_FAILED_UNAVAILABLE", message: "Flight F101 has 0 seats available" } },
+          { n: 8, name: "summarize", kind: "llm", ms: 120, st: "failed", inp: {}, out: { error: "Execution halted: Flight F101 from stale search cache has no remaining seats" } }
+        ]
+      }
+    },
+    calculation_error: {
+      name: 'Calculation Error',
+      icon: 'calculate',
+      data: {
+        task: "Find the cheapest flight from Mumbai (BOM) to Delhi (DEL) on 2026-10-04 under 6000 INR",
+        scenario_id: "flight_basic",
+        failure_type: "calculation_error",
+        expected_culprit_step: 6,
+        status: "failure",
+        steps: [
+          { n: 1, name: "parse_request", kind: "llm", ms: 90, st: "ok", inp: { raw: "Find cheapest flight BOM to DEL under 6000 INR" }, out: { intent: "find_flight", origin: "BOM", destination: "DEL", max_price: 6000 } },
+          { n: 2, name: "plan_trip", kind: "llm", ms: 105, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "BOM", to: "DEL", max_price: 6000 } } },
+          { n: 3, name: "search_flights", kind: "tool", ms: 220, st: "ok", inp: { query: { from: "BOM", to: "DEL", date: "2026-10-04" } }, out: { query: { from: "BOM", to: "DEL" }, results: [{ id: "F101", origin: "BOM", destination: "DEL", price: 5200 }] } },
+          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "F101", price: 5200 }], max_budget: 6000 }, out: { selected_flight: { id: "F101", origin: "BOM", destination: "DEL", price: 5200 } } },
+          { n: 5, name: "check_availability", kind: "tool", ms: 130, st: "ok", inp: { flight_id: "F101" }, out: { flight_id: "F101", available: true, seats_left: 5 } },
+          { n: 6, name: "compute_price", kind: "tool", ms: 60, st: "ok", inp: { base: 5200, taxes: 624 }, out: { base: 5200, taxes: 624, total: 4576 } },
+          { n: 7, name: "book_flight", kind: "tool", ms: 175, st: "failed", inp: { flight_id: "F101", expected_total: 5824, computed_total: 4576 }, out: { status: "rejected", error: "PRICE_CALCULATION_MISMATCH", expected: 5824, actual: 4576 } },
+          { n: 8, name: "summarize", kind: "llm", ms: 125, st: "failed", inp: {}, out: { error: "Execution halted: Booking total 4576 INR does not equal base fare 5200 plus taxes 624 (expected 5824 INR)" } }
+        ]
+      }
+    },
+    healthy_run: {
+      name: 'Healthy Run (Success)',
+      icon: 'check_circle',
+      data: {
+        task: "Find the cheapest flight from Delhi (DEL) to Bengaluru (BLR) on 2026-10-04 under 8000 INR",
+        scenario_id: "flight_route_del_blr",
+        failure_type: null,
+        expected_culprit_step: null,
+        status: "success",
+        steps: [
+          { n: 1, name: "parse_request", kind: "llm", ms: 95, st: "ok", inp: { raw: "Find flight from Delhi to Bengaluru" }, out: { intent: "find_flight", origin: "DEL", destination: "BLR", max_price: 8000 } },
+          { n: 2, name: "plan_trip", kind: "llm", ms: 110, st: "ok", inp: { intent: "find_flight" }, out: { journey: { from: "DEL", to: "BLR", max_price: 8000, date: "2026-10-04" } } },
+          { n: 3, name: "search_flights", kind: "tool", ms: 230, st: "ok", inp: { query: { from: "DEL", to: "BLR", date: "2026-10-04" } }, out: { query: { from: "DEL", to: "BLR" }, results: [{ id: "6E-501", origin: "DEL", destination: "BLR", price: 5300 }] } },
+          { n: 4, name: "filter_by_budget", kind: "llm", ms: 85, st: "ok", inp: { candidates: [{ id: "6E-501", price: 5300 }], max_price: 8000 }, out: { selected_flight: { id: "6E-501", origin: "DEL", destination: "BLR", price: 5300 } } },
+          { n: 5, name: "check_availability", kind: "tool", ms: 125, st: "ok", inp: { flight_id: "6E-501" }, out: { flight_id: "6E-501", available: true, seats_left: 6 } },
+          { n: 6, name: "compute_price", kind: "tool", ms: 55, st: "ok", inp: { base: 5300 }, out: { base: 5300, taxes: 636, total: 5936 } },
+          { n: 7, name: "book_flight", kind: "tool", ms: 195, st: "ok", inp: { flight_id: "6E-501", total: 5936 }, out: { origin: "DEL", destination: "BLR", total: 5936, status: "confirmed", pnr: "PNR-BLR-8492" } },
+          { n: 8, name: "summarize", kind: "llm", ms: 120, st: "ok", inp: { booking_status: "confirmed", pnr: "PNR-BLR-8492" }, out: { summary: "Successfully booked flight 6E-501 from Delhi (DEL) to Bengaluru (BLR) for 5936 INR. PNR: PNR-BLR-8492" } }
         ]
       }
     }
@@ -97,17 +187,15 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
       if (!jsonText.trim()) throw new Error('Please paste or upload a JSON trace.')
       const parsed = JSON.parse(jsonText)
       const id = parsed.id || parsed.run_id || parsed.trace_id || `IMP-${Date.now().toString().slice(-4)}`
-      const textDump = jsonText.toUpperCase()
-      const isRouteHallucination = (textDump.includes('BLR') && textDump.includes('BOM')) || textDump.includes('ROUTE')
-      
+
       let rawSteps = []
       if (Array.isArray(parsed.steps)) {
         rawSteps = parsed.steps.map((s, idx) => ({
-          n: idx + 1,
+          n: s.n || idx + 1,
           name: s.name || `step_${idx + 1}`,
           kind: s.kind || (s.type === 'tool' ? 'tool' : 'llm'),
           ms: s.latency_ms || s.ms || 120,
-          st: s.st || (s.status === 'error' || s.status === 'failure' ? 'failed' : (idx === parsed.steps.length - 1 ? 'failed' : 'ok')),
+          st: s.st || (s.status === 'error' || s.status === 'failure' ? 'failed' : 'ok'),
           inp: s.inp || s.inputs || {},
           out: s.out || s.outputs || {}
         }))
@@ -115,66 +203,104 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
         rawSteps = parsed.spans.map((s, idx) => ({
           n: idx + 1,
           name: s.name || `span_${idx + 1}`,
-          kind: s.type === 'tool' ? 'tool' : 'llm',
-          ms: s.latency_ms || 120,
-          st: s.status === 'error' || idx === parsed.spans.length - 1 ? 'failed' : 'ok',
-          inp: s.inputs || {},
-          out: s.outputs || {}
+          kind: s.type === 'tool' || s.kind === 'tool' ? 'tool' : 'llm',
+          ms: s.latency_ms || s.ms || 120,
+          st: s.st || (s.status === 'error' || s.status === 'failure' ? 'failed' : 'ok'),
+          inp: s.inputs || s.inp || {},
+          out: s.outputs || s.out || {}
         }))
       } else {
         throw new Error('JSON trace must contain either a "steps" or "spans" array.')
       }
 
-      const culpritIdx = isRouteHallucination ? 2 : 2
-      const scores = rawSteps.map((_, i) => (i === culpritIdx ? 0.94 : i === rawSteps.length - 1 ? 0.42 : 0.07))
+      if (rawSteps.length === 0) {
+        throw new Error('JSON trace contains an empty steps/spans array.')
+      }
+
+      const failureType = parsed.failure_type || null
+      const expectedCulprit = parsed.expected_culprit_step
+      const status = parsed.status
+
+      const ok = status != null ? status === 'success' : rawSteps.every(s => s.st === 'ok')
+
+      let culpritIdx = null
+      if (!ok) {
+        if (expectedCulprit != null && Number.isInteger(Number(expectedCulprit)) && Number(expectedCulprit) >= 1 && Number(expectedCulprit) <= rawSteps.length) {
+          culpritIdx = Number(expectedCulprit) - 1
+        } else {
+          const firstFailed = rawSteps.findIndex(s => s.st === 'failed')
+          culpritIdx = firstFailed >= 0 ? firstFailed : null
+        }
+      }
+
+      const scores = rawSteps.map((_, i) => {
+        if (ok || culpritIdx == null) return 0.05
+        if (i < culpritIdx) return 0.05
+        if (i === culpritIdx) return 0.94
+        const stepsAfter = rawSteps.length - 1 - culpritIdx
+        if (stepsAfter <= 1) return 0.45
+        const decay = 0.45 - ((0.45 - 0.15) * (i - (culpritIdx + 1))) / (stepsAfter - 1)
+        return Math.round(decay * 100) / 100
+      })
+
+      const ft = ok ? null : failureType
+      const sc = parsed.scenario_id || 'imported_trace'
+
+      let ev = []
+      if (!ok) {
+        if (ft && EVIDENCE_MAP[ft]) {
+          ev = EVIDENCE_MAP[ft]
+        } else {
+          ev = [
+            'Anomalous execution pattern detected in imported trace.',
+            'Downstream verification failed before completing the task.'
+          ]
+        }
+      }
 
       const importedRun = {
         id,
-        sc: parsed.scenario_id || (isRouteHallucination ? 'flight_route_del_blr' : 'imported_trace'),
-        task: parsed.task || (isRouteHallucination ? 'Find flight from Delhi (DEL) to Bengaluru (BLR) under 8000 INR' : 'Imported agent execution trace'),
-        ok: false,
-        ft: isRouteHallucination ? 'wrong_parameter' : 'imported_failure',
+        sc,
+        task: parsed.task || 'Imported agent execution trace',
+        ok,
+        ft,
         culprit: culpritIdx,
         steps: rawSteps,
         scores,
-        ev: isRouteHallucination ? [
-          'search_flights called with destination="BOM" while user requested "BLR" (Delhi → Bengaluru).',
-          'Candidate selection accepted flight 6E-204 (DEL → BOM) into execution state.',
-          'Pre-booking invariant violated: booking payload destination (BOM) != requested destination (BLR).'
-        ] : [
-          'Parameter anomaly detected between upstream plan and tool execution.',
-          'Downstream invariant check failed before finalizing action.'
-        ],
+        ev,
         parent: null,
         at: new Date().toLocaleTimeString(),
-        route: {
-          requested: { origin: 'DEL', destination: 'BLR', max_price: 8000 },
-          searchQuery: { origin: 'DEL', destination: 'BOM' },
-          selectedFlight: { id: '6E-204', origin: 'DEL', destination: 'BOM', price: 5400 },
-          booking: { origin: 'DEL', destination: 'BOM', status: 'rejected', guardrail_blocked: true }
-        },
-        invariants: [
-          {
-            name: 'Route Integrity',
-            rule: 'booking.origin == request.origin && booking.dest == request.dest',
-            status: 'VIOLATED',
-            requested: 'DEL → BLR',
-            actual: 'DEL → BOM',
-            detail: 'Hallucinated destination: requested BLR, booked BOM'
+        ...(ft === 'wrong_parameter' ? {
+          route: {
+            requested: { origin: 'DEL', destination: 'BLR', max_price: 8000 },
+            searchQuery: { origin: 'DEL', destination: 'BOM' },
+            selectedFlight: { id: '6E-204', origin: 'DEL', destination: 'BOM', price: 5400, carrier: 'IndiGo' },
+            booking: { origin: 'DEL', destination: 'BOM', status: 'rejected', guardrail_blocked: true }
           },
-          {
-            name: 'Pre-Booking Action Safety',
-            rule: 'block_action_on_invariant_violation',
-            status: 'BLOCKED',
-            requested: 'Authorized payment',
-            actual: 'Blocked by Guardrail',
-            detail: 'Execution halted before irreversible booking payload submitted'
-          }
-        ]
+          invariants: [
+            {
+              name: 'Route Integrity',
+              rule: 'booking.origin == request.origin && booking.dest == request.dest',
+              status: 'VIOLATED',
+              requested: 'DEL → BLR',
+              actual: 'DEL → BOM',
+              detail: 'Hallucinated destination: requested BLR, booked BOM'
+            },
+            {
+              name: 'Pre-Booking Action Safety',
+              rule: 'block_action_on_invariant_violation',
+              status: 'BLOCKED',
+              requested: 'Authorized payment',
+              actual: 'Blocked by Guardrail',
+              detail: 'Execution halted before irreversible booking payload submitted'
+            }
+          ]
+        } : {})
       }
 
       onImported(importedRun)
-      setMsg(`Trace ${importedRun.id} imported successfully. Causal suspect: Step ${culpritIdx + 1}`)
+      const toastDetail = culpritIdx != null ? `Causal suspect: Step ${culpritIdx + 1}` : 'No failure detected'
+      setMsg(`Trace ${importedRun.id} imported successfully. ${toastDetail}`)
       onClose()
     } catch (err) {
       setError(err.message)
@@ -197,10 +323,19 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <span className="mono mu" style={{ fontSize: '12px' }}>QUICK PRESETS:</span>
             <button className="btn sec sm mono" onClick={() => loadPreset('route_hallucination')}>
-              <Icon n="route" /> Delhi → Bengaluru Bug
+              <Icon n="route" /> Route Hallucination (Wrong Parameter)
             </button>
-            <button className="btn sec sm mono" onClick={() => loadPreset('langsmith_span')}>
-              <Icon n="integration_instructions" /> LangSmith Span
+            <button className="btn sec sm mono" onClick={() => loadPreset('incorrect_filtering')}>
+              <Icon n="filter_alt" /> Incorrect Filtering
+            </button>
+            <button className="btn sec sm mono" onClick={() => loadPreset('stale_search_result')}>
+              <Icon n="history" /> Stale Search Result
+            </button>
+            <button className="btn sec sm mono" onClick={() => loadPreset('calculation_error')}>
+              <Icon n="calculate" /> Calculation Error
+            </button>
+            <button className="btn sec sm mono" onClick={() => loadPreset('healthy_run')}>
+              <Icon n="check_circle" /> Healthy Run (Success)
             </button>
             <label className="btn sec sm mono" style={{ cursor: 'pointer' }}>
               <Icon n="upload_file" /> Upload File
