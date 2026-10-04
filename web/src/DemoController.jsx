@@ -2,82 +2,132 @@ import { useState } from 'react'
 import { Icon, BlackBoxCube } from './ui.jsx'
 
 export const DEMO_SCENARIOS = {
-  flight_booking: {
-    id: 'flight_booking',
-    name: '00 // Flight Booking (Mumbai → Delhi Route Bug)',
+  'RUN-1040-FLIGHT': {
+    id: 'RUN-1040-FLIGHT',
+    runId: 'RUN-1040-FLIGHT',
+    domain: 'flight_booking',
+    failureType: 'route_hallucination',
+    name: 'RUN-1040-FLIGHT // Flight Booking (Route Destination Mismatch)',
     badge: 'ROUTE HALLUCINATION',
     originStep: 3,
     originTool: 'search_flights',
     crashStep: 8,
     crashTool: 'summarize',
-    originExplanation: 'Step 3 (search_flights) searched destination "BLR" (Bengaluru) instead of requested "DEL" (Delhi). Steps 4-7 proceeded blindly on this error.',
+    originExplanation: 'Step 3 (search_flights) searched destination "BLR" (Bengaluru) instead of requested "DEL" (Delhi). Flight AI-202 (BOM → BLR) was filtered into state.',
     crashExplanation: 'Step 8 assertion failure: Booked destination BLR contradicts requested destination DEL.',
     mlInsight: 'Black Box ML ranked Step 3 (search_flights) with 96% confidence: detected destination parameter mismatch against initial user request.',
     fixPayload: '{"destination": "DEL", "city": "Delhi"}',
     fixCheckpoint: 2,
     fixDescription: 'Branch at Checkpoint 2 and correct search destination to DEL (Delhi).'
   },
-  wrong_parameter: {
-    id: 'wrong_parameter',
-    name: '01 // Parameter Deviation (Target Cluster Mismatch)',
-    badge: 'SCHEMA INVARIANT VIOLATION',
+  'RUN-1041-DEVOPS': {
+    id: 'RUN-1041-DEVOPS',
+    runId: 'RUN-1041-DEVOPS',
+    domain: 'cloud_infra',
+    failureType: 'wrong_parameter',
+    name: 'RUN-1041-DEVOPS // Cloud DevOps (Target Key Mismatch)',
+    badge: 'PARAMETER INVARIANT VIOLATION',
     originStep: 3,
     originTool: 'fetch_data',
     crashStep: 8,
     crashTool: 'execute_action / summarize',
-    originExplanation: 'Step 3 (fetch_data) mutated target_partition="AP-SOUTH" while user explicitly requested "US-EAST". The agent selected and prepared operations for the wrong partition.',
-    crashExplanation: 'Pre-execution guardrail blocked execution: payload target (AP-SOUTH) != requested target (US-EAST).',
+    originExplanation: 'Step 3 (fetch_data) queried target_region="EU-CENTRAL" while user explicitly requested "US-WEST". Node NODE-204 was selected into execution state.',
+    crashExplanation: 'Pre-execution guardrail blocked execution: payload target region (EU-CENTRAL) != requested target (US-WEST).',
     mlInsight: 'Random Forest identified parameter deviation between execution plan and data query, ranking Step 3 as the #1 causal root with 94% confidence.',
-    fixPayload: '{"query": {"source": "US-WEST", "target": "US-EAST"}}',
+    fixPayload: '{"query": {"source": "US-EAST", "target_region": "US-WEST"}}',
     fixCheckpoint: 2,
-    fixDescription: 'Branch at Checkpoint 2 and restore the correct target parameter "US-EAST".'
+    fixDescription: 'Branch at Checkpoint 2 and restore the correct target region "US-WEST".'
   },
-  incorrect_filtering: {
-    id: 'incorrect_filtering',
-    name: '02 // Filter Relaxation (Budget Overflow)',
-    badge: 'MODEL DECISION',
-    originStep: 4,
-    originTool: 'filter_records',
-    crashStep: 8,
-    crashTool: 'summarize',
-    originExplanation: 'Step 4 relaxed user constraint from requested 20,000 to 30,000 units, allowing an invalid record into selected state.',
-    crashExplanation: 'Action finalized on an over-budget record, violating the user intent specification.',
-    mlInsight: 'Random Forest detected state anomaly across the budget invariant, ranking Step 4 with 89% confidence.',
-    fixPayload: '{"max_limit": 20000, "strict": true}',
-    fixCheckpoint: 3,
-    fixDescription: 'Branch at Checkpoint 3 and enforce strict budget constraint.'
-  },
-  stale_search_result: {
-    id: 'stale_search_result',
-    name: '03 // Stale Data Cache (Retrieval Failure)',
-    badge: 'RETRIEVAL INVARIANT',
-    originStep: 3,
-    originTool: 'fetch_data',
-    crashStep: 8,
-    crashTool: 'summarize',
-    originExplanation: 'Step 3 returned cached data dated 3 days earlier (18,400 vs live 24,900 units). Downstream steps proceeded without re-validation.',
-    crashExplanation: 'The final constraint verification failed at step 8 when reconciling with live system records.',
-    mlInsight: 'Random Forest flagged unusual latency deviation and downstream context mismatch, pinpointing Step 3 with 94% confidence.',
-    fixPayload: '{"record_id": "REC-101", "units": 24900, "live": true}',
-    fixCheckpoint: 2,
-    fixDescription: 'Branch at Checkpoint 2 and refresh query with live data.'
-  },
-  calculation_error: {
-    id: 'calculation_error',
-    name: '04 // Calculation Error (Corrupt Value)',
+  'RUN-1042-FINTECH': {
+    id: 'RUN-1042-FINTECH',
+    runId: 'RUN-1042-FINTECH',
+    domain: 'ecommerce_settlement',
+    failureType: 'calculation_error',
+    name: 'RUN-1042-FINTECH // E-Commerce Settlement (Payout Calculation Error)',
     badge: 'STATE CORRUPTION',
     originStep: 6,
-    originTool: 'compute_metrics',
+    originTool: 'calculate_payout',
     crashStep: 8,
-    crashTool: 'summarize',
-    originExplanation: 'Step 6 (compute_metrics) silently produced total = -1240 units, violating a positive value invariant.',
-    crashExplanation: 'Step 8 (summarize) failed validation when verifying final output metrics.',
+    crashTool: 'execute_transfer / summarize',
+    originExplanation: 'Step 6 (calculate_payout) silently produced net_total=-$1,240 due to fee deduction sign inversion, violating non-negative balance invariant.',
+    crashExplanation: 'Settlement gateway halted before executing irreversible negative wire transfer at Step 7/8.',
     mlInsight: 'Random Forest classifier detected state corruption and downstream dependency failure, ranking Step 6 as the #1 culprit with 92% confidence.',
-    fixPayload: '{"total": 5936, "base": 5300, "taxes": 636}',
+    fixPayload: '{"net_payout": 9680, "fee_deduction": 1320, "base": 11000}',
     fixCheckpoint: 5,
-    fixDescription: 'Branch at Checkpoint 5 and provide the non-negative metric payload.'
+    fixDescription: 'Branch at Checkpoint 5 and provide verified non-negative payout calculation.'
+  },
+  'RUN-1043-LAKEHOUSE': {
+    id: 'RUN-1043-LAKEHOUSE',
+    runId: 'RUN-1043-LAKEHOUSE',
+    domain: 'etl_pipeline',
+    failureType: 'stale_search_result',
+    name: 'RUN-1043-LAKEHOUSE // Data Lakehouse (Stale Cached Metadata)',
+    badge: 'RETRIEVAL INVARIANT',
+    originStep: 3,
+    originTool: 'inspect_schema',
+    crashStep: 8,
+    crashTool: 'validate_consistency / summarize',
+    originExplanation: 'Step 3 (inspect_schema) served partition metadata from 3-day-old cache (schema v2.1 vs live v2.4). Downstream steps used stale row counts.',
+    crashExplanation: 'Validation detected missing partition columns and prevented downstream silent partition corruption at Step 8.',
+    mlInsight: 'Random Forest flagged unusual latency deviation and downstream schema mismatch, pinpointing Step 3 with 94% confidence.',
+    fixPayload: '{"schema_version": "v2.4", "invalidate_cache": true}',
+    fixCheckpoint: 2,
+    fixDescription: 'Branch at Checkpoint 2 and invalidate cache to refresh schema metadata.'
+  },
+  'RUN-1044-ESCROW': {
+    id: 'RUN-1044-ESCROW',
+    runId: 'RUN-1044-ESCROW',
+    domain: 'customer_refund',
+    failureType: 'incorrect_filtering',
+    name: 'RUN-1044-ESCROW // Customer Support (Policy Filter Relaxation)',
+    badge: 'MODEL DECISION FAILURE',
+    originStep: 4,
+    originTool: 'filter_policy_rules',
+    crashStep: 8,
+    crashTool: 'validate_customer_tier / summarize',
+    originExplanation: 'Step 4 (filter_policy_rules) applied executive approval cap ($500) instead of Tier-1 goodwill limit ($250). Refund item exceeded authorized policy limit.',
+    crashExplanation: 'Pre-execution guardrail: customer tier does not authorize requested $480 refund before wallet transfer.',
+    mlInsight: 'Random Forest detected state anomaly across the budget invariant, ranking Step 4 with 89% confidence.',
+    fixPayload: '{"applied_limit": 250, "strict_policy": true}',
+    fixCheckpoint: 3,
+    fixDescription: 'Branch at Checkpoint 3 and enforce strict Tier-1 policy limit ($250).'
+  },
+  'RUN-1045-HEALTHY': {
+    id: 'RUN-1045-HEALTHY',
+    runId: 'RUN-1045-HEALTHY',
+    domain: 'flight_booking',
+    failureType: null,
+    name: 'RUN-1045-HEALTHY // Healthy Baseline (Clean Execution)',
+    badge: 'HEALTHY EXECUTION',
+    isHealthy: true,
+    originStep: null,
+    originTool: null,
+    crashStep: null,
+    crashTool: null,
+    originExplanation: 'All steps executed cleanly. Parameters, schema invariants, and output assertions passed without errors.',
+    crashExplanation: 'Execution completed with 100% assertion pass rate (status: success).',
+    mlInsight: 'Random Forest classifier confirmed all step suspicion scores are within nominal bounds (< 0.15).',
+    fixPayload: null,
+    fixCheckpoint: null,
+    fixDescription: 'Clean baseline execution — no intervention required.'
   }
 }
+
+// Aliases for backwards-compatibility
+DEMO_SCENARIOS.flight_booking = DEMO_SCENARIOS['RUN-1040-FLIGHT']
+DEMO_SCENARIOS.wrong_parameter = DEMO_SCENARIOS['RUN-1041-DEVOPS']
+DEMO_SCENARIOS.calculation_error = DEMO_SCENARIOS['RUN-1042-FINTECH']
+DEMO_SCENARIOS.stale_search_result = DEMO_SCENARIOS['RUN-1043-LAKEHOUSE']
+DEMO_SCENARIOS.incorrect_filtering = DEMO_SCENARIOS['RUN-1044-ESCROW']
+
+export const DEMO_SCENARIO_LIST = [
+  'RUN-1040-FLIGHT',
+  'RUN-1041-DEVOPS',
+  'RUN-1042-FINTECH',
+  'RUN-1043-LAKEHOUSE',
+  'RUN-1044-ESCROW',
+  'RUN-1045-HEALTHY'
+]
 
 export const DEMO_STEPS = [
   {
@@ -85,7 +135,7 @@ export const DEMO_STEPS = [
     title: 'Incident Recorded in Production',
     code: '01 FAULT',
     page: 'Overview',
-    description: 'An AI booking agent completed a multi-step execution. The final trace outcome surfaced as FAILED.',
+    description: 'An AI agent completed a multi-step execution. Trace telemetry captures the entire decision path.',
     actionLabel: 'Inspect Incident Trace →',
     targetPage: 'Investigate'
   },
@@ -112,7 +162,7 @@ export const DEMO_STEPS = [
     title: 'Zero-Waste Checkpoint Replay',
     code: '04 CHECKPOINT',
     page: 'Replay',
-    description: 'Instead of re-executing all 8 steps from scratch, Black Box branches memory at the exact checkpoint before corruption. Upstream steps are reused instantly.',
+    description: 'Instead of re-executing all steps from scratch, Black Box branches memory at the exact checkpoint before corruption. Upstream steps are reused instantly.',
     actionLabel: 'Execute Counterfactual Fix ⚡',
     isFixAction: true
   },
@@ -139,7 +189,7 @@ export default function DemoController({
   onResetDemo
 }) {
   const [minimized, setMinimized] = useState(false)
-  const sc = DEMO_SCENARIOS[currentScenario] || DEMO_SCENARIOS.calculation_error
+  const sc = DEMO_SCENARIOS[currentScenario] || DEMO_SCENARIOS['RUN-1040-FLIGHT']
   const currentStepObj = DEMO_STEPS[demoStep - 1] || DEMO_STEPS[0]
 
   if (!active) return null
@@ -194,7 +244,7 @@ export default function DemoController({
               onChange={e => onSelectScenario(e.target.value)}
               className="demo-select mono"
             >
-              {Object.values(DEMO_SCENARIOS).map(s => (
+              {DEMO_SCENARIO_LIST.map(id => DEMO_SCENARIOS[id]).filter(Boolean).map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
@@ -245,16 +295,18 @@ export default function DemoController({
               <div className="demo-intel">
                 <span className="demo-intel-label mono">INCIDENT CONTEXT</span>
                 <span className="demo-intel-body">
-                  <b>{sc.name.split('//')[1]?.trim()}:</b> The agent was instructed to execute a multi-step query under strict constraints, but execution failed at the end of the trace.
+                  <b>{sc.name.split('//')[1]?.trim()}:</b> {sc.isHealthy ? 'Nominal baseline execution: all steps and constraints completed cleanly without error.' : 'The agent was instructed to execute a multi-step query under strict constraints, but execution failed at the end of the trace.'}
                 </span>
               </div>
             )}
 
             {demoStep === 2 && (
-              <div className="demo-intel alert">
-                <span className="demo-intel-label mono">CAUSAL GAP IDENTIFIED</span>
+              <div className={`demo-intel ${sc.isHealthy ? 'success' : 'alert'}`}>
+                <span className="demo-intel-label mono">{sc.isHealthy ? 'NOMINAL EXECUTION' : 'CAUSAL GAP IDENTIFIED'}</span>
                 <span className="demo-intel-body">
-                  Root cause originated at <b>Step {sc.originStep} ({sc.originTool})</b>, but execution silently continued until crashing at <b>Step {sc.crashStep} ({sc.crashTool})</b>. Naive crash dumps miss the culprit entirely.
+                  {sc.isHealthy
+                    ? 'All 8 steps completed in nominal state. No causal gap or invariant violation was observed.'
+                    : <>Root cause originated at <b>Step {sc.originStep} ({sc.originTool})</b>, but execution silently continued until crashing at <b>Step {sc.crashStep} ({sc.crashTool})</b>. Naive crash dumps miss the culprit entirely.</>}
                 </span>
               </div>
             )}
@@ -272,7 +324,9 @@ export default function DemoController({
               <div className="demo-intel">
                 <span className="demo-intel-label mono">CHECKPOINT REPLAY EFFICIENCY</span>
                 <span className="demo-intel-body">
-                  State is restored from <b>Checkpoint {sc.fixCheckpoint}</b>. Steps 1 through {sc.fixCheckpoint} are re-used from memory, saving 100% of upstream tokens and compute latency.
+                  {sc.isHealthy
+                    ? 'Checkpoints allow branching alternative executions from any step without re-running earlier steps.'
+                    : <>State is restored from <b>Checkpoint {sc.fixCheckpoint}</b>. Steps 1 through {sc.fixCheckpoint} are re-used from memory, saving 100% of upstream tokens and compute latency.</>}
                 </span>
               </div>
             )}
@@ -281,7 +335,9 @@ export default function DemoController({
               <div className="demo-intel success">
                 <span className="demo-intel-label mono">COUNTERFACTUAL VERIFICATION</span>
                 <span className="demo-intel-body">
-                  The comparative diff confirms that injecting the fix at Checkpoint {sc.fixCheckpoint} resolved downstream errors and converted the failure to SUCCESS.
+                  {sc.isHealthy
+                    ? 'Baseline trace verified: comparative analysis confirms clean nominal execution.'
+                    : <>The comparative diff confirms that injecting the fix at Checkpoint {sc.fixCheckpoint} resolved downstream errors and converted the failure to SUCCESS.</>}
                 </span>
               </div>
             )}
@@ -300,7 +356,7 @@ export default function DemoController({
                 className="btn pri sm mono demo-main-cta"
                 onClick={handleNext}
               >
-                {currentStepObj.actionLabel}
+                {sc.isHealthy && currentStepObj.isFixAction ? 'Inspect Verified Outcome →' : currentStepObj.actionLabel}
               </button>
             </div>
           </div>

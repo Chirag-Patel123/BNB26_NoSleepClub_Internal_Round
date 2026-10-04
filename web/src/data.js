@@ -3,8 +3,8 @@
 export const DOMAINS = {
   flight_booking: {
     id: 'flight_booking',
-    name: 'Flight Booking Agent (Flagship Demo)',
-    badge: 'ANALOGY // FLIGHT DEMO',
+    name: 'Flight Booking Agent',
+    badge: 'TRAVEL // FLIGHT BOOKING',
     steps: [
       ['understand_request', 'llm'],
       ['plan_trip', 'llm'],

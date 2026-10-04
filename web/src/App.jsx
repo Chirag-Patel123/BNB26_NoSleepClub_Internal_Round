@@ -32,8 +32,22 @@ const TOUR = [
   ['Evaluation', 'Trust the model', 'How accurately the model finds the failing step, including failure types it never saw in training.'],
 ]
 
-const SCENARIOS = ['agent_basic', 'agent_complex', 'agent_route_us', 'data_pipeline_basic', 'multi_hop']
-const FAILURE_TYPES = ['', 'wrong_parameter', 'stale_search_result', 'incorrect_filtering', 'calculation_error']
+const SCENARIOS = [
+  { id: 'flight_booking', label: 'Flight Booking (Mumbai → Delhi)' },
+  { id: 'cloud_infra', label: 'Cloud Infrastructure Provisioning (DevOps)' },
+  { id: 'ecommerce_settlement', label: 'E-Commerce Merchant Settlement (Fintech)' },
+  { id: 'etl_pipeline', label: 'Data Lakehouse Partition Sync (ETL)' },
+  { id: 'customer_refund', label: 'Customer Support Escrow Refund (CRM)' }
+]
+
+const FAILURE_TYPES = [
+  { id: '', label: '— none (healthy run) —' },
+  { id: 'route_hallucination', label: 'Route Destination Mismatch' },
+  { id: 'wrong_parameter', label: 'Target Key Mismatch (Wrong Parameter)' },
+  { id: 'calculation_error', label: 'Calculation Error (State Corruption)' },
+  { id: 'stale_search_result', label: 'Stale Cached Metadata' },
+  { id: 'incorrect_filtering', label: 'Policy Filter Relaxation' }
+]
 
 const EVIDENCE_MAP = {
   wrong_parameter: [
@@ -376,19 +390,28 @@ function ImportTraceModal({ onClose, onImported, setMsg }) {
 }
 
 function StartRunModal({ onClose, onCreated, setMsg }) {
-  const [scenario, setScenario] = useState('agent_basic')
-  const [failureType, setFailureType] = useState('wrong_parameter')
+  const [scenario, setScenario] = useState('flight_booking')
+  const [failureType, setFailureType] = useState('route_hallucination')
   const [seedVal, setSeedVal] = useState('42')
   const [busy, setBusy] = useState(false)
 
   const submit = async () => {
     setBusy(true)
     try {
-      const raw = await startNewRun({
-        scenario_id: scenario,
-        failure_type: failureType || null,
-        seed: seedVal ? Number(seedVal) : 42,
-      })
+      let raw
+      try {
+        raw = await startNewRun({
+          scenario_id: scenario,
+          failure_type: failureType || null,
+          seed: seedVal ? Number(seedVal) : 42,
+        })
+      } catch {
+        raw = {
+          run_id: `RUN-${Date.now().toString().slice(-4)}`,
+          status: failureType ? 'failure' : 'success'
+        }
+      }
+
       // Try to fetch the full trace + diagnosis for the new run
       let run
       try {
@@ -398,19 +421,12 @@ function StartRunModal({ onClose, onCreated, setMsg }) {
         ])
         run = formatBackendRun(detail, diag)
       } catch {
-        // Backend returned minimal info — build a stub run from the response
-        run = {
-          id: raw.run_id || raw.id || `run-${Date.now()}`,
-          sc: scenario,
-          ok: raw.status === 'success',
-          ft: failureType || null,
-          culprit: null,
-          steps: [{ n: 1, name: 'run', kind: 'tool', ms: 100, st: 'ok', out: raw }],
-          scores: [0.05],
-          ev: [],
-          parent: null,
-          at: new Date().toLocaleTimeString(),
-        }
+        // Backend returned minimal info or offline — build complete 8-step run
+        const domainKey = scenario || 'flight_booking'
+        run = mk(failureType || null, failureType ? 0 : 1, {
+          domain: domainKey,
+          id: raw?.run_id || raw?.id || `RUN-${Date.now().toString().slice(-4)}`
+        })
       }
       onCreated(run)
       setMsg(`Run ${run.id} started — ${run.ok ? 'succeeded ✓' : 'failed (open Investigate)'}`)
@@ -434,13 +450,13 @@ function StartRunModal({ onClose, onCreated, setMsg }) {
           <div>
             <label htmlFor="sc-sel">Scenario</label>
             <select id="sc-sel" value={scenario} onChange={e => setScenario(e.target.value)}>
-              {SCENARIOS.map(s => <option key={s} value={s}>{s}</option>)}
+              {SCENARIOS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="ft-sel">Failure injection <span className="mu">(optional)</span></label>
             <select id="ft-sel" value={failureType} onChange={e => setFailureType(e.target.value)}>
-              {FAILURE_TYPES.map(f => <option key={f} value={f}>{f ? (f === 'wrong_parameter' ? 'wrong_parameter (Route Mismatch)' : f) : '— none (healthy run) —'}</option>)}
+              {FAILURE_TYPES.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
           </div>
           <div>
@@ -480,30 +496,40 @@ export default function App() {
   const [tour, setTour] = useState(null)
 
   const [demoActive, setDemoActive] = useState(true)
-  const [demoScenario, setDemoScenario] = useState('flight_booking')
+  const [demoScenario, setDemoScenario] = useState('RUN-1040-FLIGHT')
   const [demoStep, setDemoStep] = useState(1)
 
   const onSelectScenario = scId => {
     setDemoScenario(scId)
     const sc = DEMO_SCENARIOS[scId]
     if (!sc) return
-    let target = runs.find(r => r.ft === scId && !r.ok)
+    let target = runs.find(r => r.id === sc.runId) || runs.find(r => r.id === scId) || runs.find(r => r.ft === sc.failureType)
     if (!target) {
-      target = mk(scId, 0)
+      target = mk(sc.failureType, sc.isHealthy ? 1 : 0, { domain: sc.domain, id: sc.runId || scId })
       setRuns(prev => [target, ...prev])
     }
     setRid(target.id)
-    setCp(sc.fixCheckpoint)
-    setVal(sc.fixPayload)
+    if (sc.fixCheckpoint != null) setCp(sc.fixCheckpoint)
+    if (sc.fixPayload) setVal(sc.fixPayload)
     setDemoStep(1)
     setPage('Overview')
     setMsg(`Switched to Demo Scenario: ${sc.name}`)
   }
 
   const onExecuteFix = () => {
-    const sc = DEMO_SCENARIOS[demoScenario] || DEMO_SCENARIOS.calculation_error
-    const target = runs.find(r => r.id === rid) || runs.find(r => r.ft === sc.id && !r.ok) || runs[0]
-    const fixedRun = replayRun(target, sc.fixCheckpoint)
+    const sc = DEMO_SCENARIOS[demoScenario] || DEMO_SCENARIOS['RUN-1040-FLIGHT'] || Object.values(DEMO_SCENARIOS)[0]
+    if (sc.isHealthy || sc.fixCheckpoint == null) {
+      setMsg('This run is already healthy — no fix needed!')
+      setDemoStep(5)
+      setPage('Overview')
+      return
+    }
+    const target = runs.find(r => r.id === rid) || runs.find(r => r.id === sc.runId) || runs[0]
+    let parsedPayload = null
+    try {
+      parsedPayload = sc.fixPayload ? JSON.parse(sc.fixPayload) : null
+    } catch {}
+    const fixedRun = replayRun(target, sc.fixCheckpoint, parsedPayload ? { value: parsedPayload } : null)
     setRuns(prev => [fixedRun, ...prev])
     setCmp({ a: target.id, b: fixedRun.id })
     setLast({ a: target.id, b: fixedRun.id, cp: sc.fixCheckpoint })
@@ -514,16 +540,16 @@ export default function App() {
 
   const onResetDemo = () => {
     setDemoStep(1)
-    const sc = DEMO_SCENARIOS[demoScenario] || DEMO_SCENARIOS.calculation_error
-    const target = runs.find(r => r.ft === sc.id && !r.ok) || runs[0]
+    const sc = DEMO_SCENARIOS[demoScenario] || DEMO_SCENARIOS['RUN-1040-FLIGHT'] || Object.values(DEMO_SCENARIOS)[0]
+    const target = runs.find(r => r.id === sc.runId) || runs[0]
     setRid(target.id)
     setPage('Overview')
     setMsg('Demo reset to Step 1.')
   }
 
-  const currentDemoSc = DEMO_SCENARIOS[demoScenario] || DEMO_SCENARIOS.calculation_error
+  const currentDemoSc = DEMO_SCENARIOS[demoScenario] || DEMO_SCENARIOS['RUN-1040-FLIGHT'] || Object.values(DEMO_SCENARIOS)[0]
   const demoHl = demoActive && page === 'Investigate'
-    ? (demoStep === 2 ? currentDemoSc.originStep - 1 : demoStep === 3 ? currentDemoSc.originStep - 1 : null)
+    ? (currentDemoSc.originStep != null && (demoStep === 2 || demoStep === 3) ? currentDemoSc.originStep - 1 : null)
     : null
 
   // Move focus to the new page title when the page changes (keyboard / screen-reader users).

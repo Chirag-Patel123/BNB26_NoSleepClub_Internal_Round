@@ -12,13 +12,14 @@ const kd = fn => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefau
 const mentions = (e, name) => { try { return new RegExp('\\b' + name + '\\b').test(e) } catch { return false } }
 
 function Latency({ r }) {
+  if (!r || !r.steps || !r.steps.length) return null
   const total = r.steps.reduce((t, s) => t + (s.ms || 0), 0) || 1
-  const slow = r.steps.reduce((m, s, i) => ((s.ms || 0) > (r.steps[m].ms || 0) ? i : m), 0)
+  const slow = r.steps.reduce((m, s, i) => ((s.ms || 0) > (r.steps[m]?.ms || 0) ? i : m), 0)
   let at = 0
   return (
     <div className="card" style={{ margin: 'var(--gap) 0' }}>
       <h2 style={{ margin: 0 }}><Icon n="timer" /> Latency timeline</h2>
-      <p className="mu" style={{ margin: '4px 0 10px' }}>Each bar starts when its step starts. Total {total} ms · slowest: <b>{r.steps[slow].name}</b> ({r.steps[slow].ms} ms).</p>
+      <p className="mu" style={{ margin: '4px 0 10px' }}>Each bar starts when its step starts. Total {total} ms · slowest: <b>{r.steps[slow]?.name || '—'}</b> ({r.steps[slow]?.ms || 0} ms).</p>
       {r.steps.map((s, i) => {
         const left = (at / total) * 100
         const w = Math.max(1.5, ((s.ms || 0) / total) * 100)
