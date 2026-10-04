@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { seed, replayRun, mk, generateRandomRun } from './data.js'
-import { Icon } from './ui.jsx'
+import { Icon, BlackBoxCube, BlackBoxBadge } from './ui.jsx'
 import DemoController, { DEMO_SCENARIOS, DEMO_STEPS } from './DemoController.jsx'
 import { Overview, Logs, Investigate, Replay, Compare, Evaluation } from './pages.jsx'
 import { NotFound } from './NotFound.jsx'
@@ -537,7 +537,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    document.title = `${page} — Black Box AI Agent Recorder`
+    document.title = `${page} — Black Box Web AI Agent`
     const metaDesc = document.querySelector('meta[name="description"]')
     if (metaDesc && PAGE_DESCRIPTIONS[page]) {
       metaDesc.setAttribute('content', PAGE_DESCRIPTIONS[page])
@@ -677,10 +677,12 @@ export default function App() {
       <a className="skip" href="#main">Skip to content</a>
       <div className="sr-only" role="status" aria-live="polite">{msg}</div>
       <header>
-        <div className="brand">
-          <div className="mark"><Icon n="terminal" /></div>
-          <span className="brand-name mono">BLACK_BOX</span>
-          <span className="brand-tag mono">AGENT_RECORDER</span>
+        <div className="brand" title="Black Box Web AI Agent">
+          <div className="mark" aria-hidden="true">
+            <BlackBoxCube size={19} color="#000000" seamColor="#ffffff" />
+          </div>
+          <span className="brand-name">BLACK BOX</span>
+          <span className="brand-tag mono">WEB AI AGENT</span>
         </div>
         <div className="btn-group">
           <button
@@ -872,9 +874,9 @@ function JudgeGuideModal({ onClose }) {
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Why Flight Booking? The Black Box Analogy">
       <div className="modal-card" style={{ maxWidth: 680, maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Icon n="flight_takeoff" />
-            <span>Why Flight Booking? The Black Box Analogy</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <BlackBoxBadge size={26} cubeSize={16} radius={5} />
+            <span style={{ fontWeight: 700 }}>Why Flight Booking? The Black Box Analogy</span>
           </div>
           <button className="btn sm sec" onClick={onClose} aria-label="Close modal">✕</button>
         </div>

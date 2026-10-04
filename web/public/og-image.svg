@@ -1,10 +1,34 @@
-﻿<svg xmlns=\http://www.w3.org/2000/svg\ viewBox=\0 0 1200 630\ width=\1200\ height=\630\>
- <rect width=\1200\ height=\630\ fill=\#08090e\/>
- <text x=\100\ y=\160\ font-family=\sans-serif\ font-size=\24\ font-weight=\700\ fill=\#ff9d3b\ letter-spacing=\4\>AGENT RECORDER &amp; CAUSAL DEBUGGER</text>
- <text x=\100\ y=\250\ font-family=\sans-serif\ font-size=\64\ font-weight=\800\ fill=\#f1f5f9\>BLACK BOX</text>
- <text x=\100\ y=\320\ font-family=\sans-serif\ font-size=\26\ fill=\#94a3b8\>Trace-grounded fault localization and checkpointed replay for autonomous AI agents.</text>
- <rect x=\100\ y=\460\ width=\340\ height=\56\ rx=\10\ fill=\#1e2536\ stroke=\#334155\ stroke-width=\1\/>
- <circle cx=\130\ cy=\488\ r=\8\ fill=\#22c55e\/>
- <text x=\152\ y=\495\ font-family=\monospace\ font-size=\16\ font-weight=\600\ fill=\#e2e8f0\>TELEMETRY ACTIVE · SUPABASE</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <rect width="1200" height="630" fill="#08090e"/>
+  
+  <!-- Subtle Grid Accent -->
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
 
+  <!-- Logo Mark in Rounded Cream Badge -->
+  <g transform="translate(100, 110)">
+    <rect width="140" height="140" rx="32" fill="#FFF1CF"/>
+    <g transform="translate(20, 20)">
+      <polygon points="50,11 84,30.5 84,69.5 50,89 16,69.5 16,30.5" fill="#000000"/>
+      <path d="M50,50 L16,30.5 M50,50 L84,30.5 M50,50 L50,89" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- Typography -->
+  <text x="280" y="165" font-family="'Inter', system-ui, sans-serif" font-size="20" font-weight="700" fill="#FFF1CF" letter-spacing="6">WEB AI AGENT PLATFORM</text>
+  <text x="280" y="235" font-family="'Inter', system-ui, sans-serif" font-size="64" font-weight="900" fill="#f8fafc" letter-spacing="2">BLACK BOX</text>
+  
+  <text x="100" y="340" font-family="'Inter', system-ui, sans-serif" font-size="28" font-weight="500" fill="#cbd5e1">Autonomous Agent Observability, Causal Fault Localization &amp; Replay Debugger</text>
+  <text x="100" y="390" font-family="'Inter', system-ui, sans-serif" font-size="20" font-weight="400" fill="#64748b">Record compound multi-step agent trajectories · Diagnose root causes · Replay from checkpoints</text>
+
+  <!-- Status / Feature Pill -->
+  <g transform="translate(100, 480)">
+    <rect width="380" height="60" rx="14" fill="#141722" stroke="#252b3d" stroke-width="1.5"/>
+    <circle cx="36" cy="30" r="8" fill="#22c55e"/>
+    <text x="58" y="37" font-family="monospace" font-size="16" font-weight="700" fill="#e2e8f0" letter-spacing="1">TELEMETRY ACTIVE · ML LOCALIZATION 95%</text>
+  </g>
+</svg>

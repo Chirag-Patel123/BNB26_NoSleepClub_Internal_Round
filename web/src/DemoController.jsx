@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon } from './ui.jsx'
+import { Icon, BlackBoxCube } from './ui.jsx'
 
 export const DEMO_SCENARIOS = {
   flight_booking: {
@@ -180,8 +180,8 @@ export default function DemoController({
   return (
     <div className={`demo-deck ${minimized ? 'minimized' : ''}`} role="region" aria-label="Interactive Demo Walkthrough">
       <div className="demo-deck-header">
-        <div className="demo-deck-title-group">
-          <span className="demo-indicator-dot" />
+        <div className="demo-deck-title-group" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <BlackBoxCube size={16} color="#000000" seamColor="#ffffff" style={{ filter: 'drop-shadow(0 0 4px rgba(255,241,207,0.5))' }} />
           <span className="demo-deck-title mono">DEMO MODE // AGENT OBSERVABILITY INSPECTION</span>
           <span className="demo-badge mono">{sc.badge}</span>
         </div>

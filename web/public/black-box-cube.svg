@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Isometric Hexagon -->
+  <polygon points="50,11 84,30.5 84,69.5 50,89 16,69.5 16,30.5" fill="#000000"/>
+  <!-- White Dividing Y Seam -->
+  <path d="M50,50 L16,30.5 M50,50 L84,30.5 M50,50 L50,89" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
