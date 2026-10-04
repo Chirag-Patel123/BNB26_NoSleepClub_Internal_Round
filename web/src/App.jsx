@@ -11,6 +11,7 @@ import {
   startNewRun,
   formatBackendRun,
   checkApiHealth,
+  isClientRun,
 } from './api.js'
 
 const PAGES = [
@@ -481,7 +482,6 @@ export default function App() {
   const [demoActive, setDemoActive] = useState(true)
   const [demoScenario, setDemoScenario] = useState('flight_booking')
   const [demoStep, setDemoStep] = useState(1)
-  const [showAnalogyModal, setShowAnalogyModal] = useState(false)
 
   const onSelectScenario = scId => {
     setDemoScenario(scId)
@@ -597,16 +597,30 @@ export default function App() {
 
   // Load a single run by ID into the Investigate view
   const onLoadRunId = async (id) => {
+    const existing = runs.find(r => r.id === id)
+    if (existing) {
+      setRid(existing.id)
+      setMsg(`Loaded trace for ${existing.id}`)
+      return
+    }
+    if (isClientRun(id)) {
+      setMsg(`Run ${id} is not present in session`)
+      return
+    }
     setBusy('trace')
     try {
       const [detail, diag] = await Promise.all([
         fetchRun(id),
         fetchDiagnosis(id).catch(() => null),
       ])
+      if (!detail) {
+        setMsg(`Run ${id} could not be loaded from API`)
+        return
+      }
       const run = formatBackendRun(detail, diag)
       setRuns(prev => {
-        const existing = prev.find(r => r.id === run.id)
-        return existing ? prev.map(r => r.id === run.id ? run : r) : [run, ...prev]
+        const ex = prev.find(r => r.id === run.id)
+        return ex ? prev.map(r => r.id === run.id ? run : r) : [run, ...prev]
       })
       setRid(run.id)
       setMsg(`Loaded trace for ${run.id}`)
@@ -619,9 +633,17 @@ export default function App() {
 
   // Re-fetch diagnosis for a run and patch its scores/ev
   const onRefreshDiagnosis = async (id) => {
+    if (isClientRun(id)) {
+      setMsg(`Diagnosis refreshed for ${id}`)
+      return
+    }
     setBusy('diag')
     try {
       const diag = await fetchDiagnosis(id)
+      if (!diag) {
+        setMsg(`No API diagnosis available for ${id}`)
+        return
+      }
       setRuns(prev => prev.map(r => {
         if (r.id !== id) return r
         const ranked = diag?.ranked_steps || []
@@ -633,7 +655,7 @@ export default function App() {
         const ev = ranked[0]?.evidence || r.ev
         return { ...r, scores, ev }
       }))
-      setMsg(`Diagnosis refreshed for ${id}`)
+      setMsg(`Diagnosis refreshed from API for ${id}`)
     } catch (err) {
       setMsg(`Diagnosis failed: ${err.message}. Sample runs have no backend diagnosis`)
     } finally {
@@ -687,13 +709,6 @@ export default function App() {
         <div className="btn-group">
           <button
             className="btn sec sm mono"
-            onClick={() => setShowAnalogyModal(true)}
-            title="Why Flight Booking? The Black Box Analogy & Judge Guide"
-          >
-            <Icon n="flight_takeoff" /> JUDGE GUIDE
-          </button>
-          <button
-            className="btn sec sm mono"
             onClick={handleNewRandomRun}
             title="Generate a random multi-domain agent trace"
           >
@@ -728,7 +743,6 @@ export default function App() {
         onExecuteFix={onExecuteFix}
         goToPage={setPage}
         onResetDemo={onResetDemo}
-        onOpenAnalogy={() => setShowAnalogyModal(true)}
       />
 
       <nav aria-label="Main sections">
@@ -755,7 +769,6 @@ export default function App() {
             onOpenStartModal={() => setShowStartModal(true)}
             onOpenImportModal={() => setShowImportModal(true)}
             onRandomRun={handleNewRandomRun}
-            onOpenAnalogyModal={() => setShowAnalogyModal(true)}
             onRefreshRuns={onRefreshRuns}
             onInvestigate={id => { setRid(id); setPage('Investigate') }}
             onReplay={(id, step) => onReplayFrom(id, step)}
@@ -861,136 +874,6 @@ export default function App() {
           setMsg={setMsg}
         />
       )}
-
-      {showAnalogyModal && (
-        <JudgeGuideModal onClose={() => setShowAnalogyModal(false)} />
-      )}
-    </div>
-  )
-}
-
-function JudgeGuideModal({ onClose }) {
-  return (
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Why Flight Booking? The Black Box Analogy">
-      <div className="modal-card" style={{ maxWidth: 680, maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <BlackBoxBadge size={26} cubeSize={16} radius={5} />
-            <span style={{ fontWeight: 700 }}>Why Flight Booking? The Black Box Analogy</span>
-          </div>
-          <button className="btn sm sec" onClick={onClose} aria-label="Close modal">✕</button>
-        </div>
-
-        <div style={{ fontSize: 13, lineHeight: 1.6 }}>
-          <div className="call" style={{ borderColor: 'var(--ac)', background: 'rgba(255,255,255,0.03)', marginBottom: 14 }}>
-            <div className="eb" style={{ color: 'var(--ac)', marginBottom: 4 }}>ONE-LINE PITCH FOR JUDGES</div>
-            <p style={{ margin: 0, color: '#ffffff', fontSize: 13.5, fontWeight: 600 }}>
-              “When an AI agent fails after many steps, we find which step actually caused it, prove it with evidence, and test a fix without re-running everything.”
-            </p>
-          </div>
-
-          <div style={{ marginBottom: 14 }}>
-            <div className="eb">SHORT ANSWER</div>
-            <p style={{ margin: '4px 0 0' }}>
-              The project is about <b>AI agents, not airplanes</b>. <i>"Flight recorder"</i> is an analogy, and the flight-booking scenario in this demo is just an intuitive example task for the agent.
-            </p>
-          </div>
-
-          <div style={{ marginBottom: 14 }}>
-            <div className="eb">THE ANALOGY</div>
-            <p className="mu" style={{ margin: '4px 0 0' }}>
-              When a plane crashes, investigators use the black box (flight recorder) to see what happened in the minutes before. Black Box does the exact same for an AI agent: it records everything the agent did, so when the agent fails you can find out why.
-            </p>
-          </div>
-
-          <div style={{ marginBottom: 14 }}>
-            <div className="eb">WHAT AN "AI AGENT" IS</div>
-            <p className="mu" style={{ margin: '4px 0 6px' }}>
-              An AI agent is an AI program that completes a task by doing many steps in a row. For example, <i>“Book me the cheapest flight from Mumbai to Delhi under ₹6000”</i> becomes:
-            </p>
-            <ol style={{ paddingLeft: 18, margin: 0, color: 'var(--tx)', fontFamily: 'var(--fm)', fontSize: 12 }}>
-              <li>1. Understand the request (LLM)</li>
-              <li>2. Plan the trip (LLM)</li>
-              <li>3. Search flights (calls a tool) <span className="pill bad" style={{ fontSize: 10, marginLeft: 4 }}>Culprit: queried BLR instead of DEL</span></li>
-              <li>4. Filter by budget (LLM)</li>
-              <li>5. Check availability (calls a tool)</li>
-              <li>6. Calculate the price (calls a tool)</li>
-              <li>7. Book it (calls a tool)</li>
-              <li>8. Summarize (LLM) <span className="pill bad" style={{ fontSize: 10, marginLeft: 4 }}>Failure surfaced here</span></li>
-            </ol>
-          </div>
-
-          <div style={{ marginBottom: 14 }}>
-            <div className="eb">THE PROBLEM: SILENT UPSTREAM PROPAGATION</div>
-            <p className="mu" style={{ margin: '4px 0 0' }}>
-              Sometimes the agent fails at step 8, but the real mistake happened earlier. Say step 3 searched for the wrong city (Bengaluru instead of Delhi). Steps 4 to 7 then looked "successful" while building on that mistake, and the failure only showed at the end. In real production systems an agent can run thousands of times with dozens of steps each, so humans cannot read through them all to find where it went wrong.
-            </p>
-          </div>
-
-          <div style={{ marginBottom: 14 }}>
-            <div className="eb">WHAT BLACK BOX DOES (PROBLEM STATEMENT MAPPING)</div>
-            <div className="scroll" style={{ marginTop: 8 }}>
-              <table style={{ width: '100%', fontSize: 11.5, borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--ln)', textAlign: 'left' }}>
-                    <th style={{ padding: '6px 8px', color: 'var(--mu)' }}>Feature in Problem</th>
-                    <th style={{ padding: '6px 8px', color: 'var(--mu)' }}>In Simple Words</th>
-                    <th style={{ padding: '6px 8px', color: 'var(--mu)' }}>How Black Box Maps</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
-                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Execution Data</td>
-                    <td style={{ padding: '6px 8px' }}>Record every step of every run (inputs, outputs, errors, timing)</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Recording stored in Supabase / SQLite</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
-                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Failure Diagnosis</td>
-                    <td style={{ padding: '6px 8px' }}>ML model pointing to the step most likely to have caused failure</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Random Forest in ml/ (Top-1 localization 95%)</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
-                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Failure Explanation</td>
-                    <td style={{ padding: '6px 8px' }}>Show proof from recorded data for why it blames that step</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Investigate evidence panel & invariant rules</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
-                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Checkpointed Replay</td>
-                    <td style={{ padding: '6px 8px' }}>Save state after each step, restart from middle</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Replay engine (checkpoint memory reuse)</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
-                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Alternative Execution</td>
-                    <td style={{ padding: '6px 8px' }}>Change suspect step and re-run from there to verify fix</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Counterfactual override & outcome verification</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid #1a1a1e' }}>
-                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Model Evaluation</td>
-                    <td style={{ padding: '6px 8px' }}>Measure accuracy including unseen failure types</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Evaluation page (Top-1 95%, MRR 1.000)</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>Trace Comparison</td>
-                    <td style={{ padding: '6px 8px' }}>Put original run and fixed run side by side</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--fm)' }}>Compare page (shared prefix & diff metrics)</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div>
-            <div className="eb">WHY FLIGHTS, THEN?</div>
-            <p className="mu" style={{ margin: '4px 0 0' }}>
-              You need some task for the agent to perform, and flight booking is universally understood in seconds: it has clear steps, tools, and obvious ways to go wrong. You could swap it for hotel booking, customer support refund, cloud infrastructure, or a lakehouse ETL pipeline, and the Black Box system works the exact same way. That is why the failure scenarios in the project are really different types of agent mistakes (wrong parameter, filtering wrongly, stale data, calculation error), not anything about airplanes.
-            </p>
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn pri sm" onClick={onClose}>Close Guide</button>
-        </div>
-      </div>
     </div>
   )
 }

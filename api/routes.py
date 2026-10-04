@@ -126,7 +126,7 @@ def start_run(req: RunRequest):
 
 @router.get("/runs/compare", response_model=CompareResponse)
 def compare_runs(original_id: str, alternative_id: str):
-    if USE_MOCK and original_id == "run-123" and alternative_id == "run-456":
+    if (USE_MOCK or original_id == "run-123") and alternative_id == "run-456":
         return {
             "original_run_id": original_id,
             "alternative_run_id": alternative_id,
@@ -215,7 +215,8 @@ def get_run(run_id: str):
             "graph_relationships": {"step-4": ["step-5"]}
         }
 
-    if run_id.startswith("R-") or run_id.startswith("IMP-"):
+    r_up = run_id.upper()
+    if r_up.startswith("RUN-") or r_up.startswith("R-") or r_up.startswith("IMP-"):
         return {
             "run_id": run_id,
             "status": "failure",
@@ -271,8 +272,9 @@ def get_run_diagnosis(run_id: str):
             "model_version": "rf-v1"
         }
 
-    if run_id.startswith("R-") or run_id.startswith("IMP-"):
-        is_imp = run_id.startswith("IMP-")
+    r_up = run_id.upper()
+    if r_up.startswith("RUN-") or r_up.startswith("R-") or r_up.startswith("IMP-"):
+        is_imp = r_up.startswith("IMP-")
         return {
             "run_id": run_id,
             "ranked_steps": [
@@ -295,7 +297,7 @@ def get_run_diagnosis(run_id: str):
 
 @router.post("/runs/{run_id}/replay", response_model=ReplayResponse)
 def replay_run(run_id: str, req: ReplayRequest):
-    if USE_MOCK and run_id == "run-123" and req.checkpoint_id == "ckpt-5":
+    if (USE_MOCK or run_id == "run-123") and req.checkpoint_id == "ckpt-5":
         return {
             "original_run_id": run_id,
             "alternative_run_id": "run-456"

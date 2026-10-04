@@ -5,7 +5,7 @@ export const DEMO_SCENARIOS = {
   flight_booking: {
     id: 'flight_booking',
     name: '00 // Flight Booking (Mumbai → Delhi Route Bug)',
-    badge: 'FLAGSHIP DEMO // ANALOGY',
+    badge: 'ROUTE HALLUCINATION',
     originStep: 3,
     originTool: 'search_flights',
     crashStep: 8,
@@ -136,8 +136,7 @@ export default function DemoController({
   setDemoStep,
   onExecuteFix,
   goToPage,
-  onResetDemo,
-  onOpenAnalogy
+  onResetDemo
 }) {
   const [minimized, setMinimized] = useState(false)
   const sc = DEMO_SCENARIOS[currentScenario] || DEMO_SCENARIOS.calculation_error
@@ -187,9 +186,6 @@ export default function DemoController({
         </div>
 
         <div className="demo-deck-controls">
-          <button className="btn sec sm mono" onClick={onOpenAnalogy} title="Why Flight Booking? The Black Box Analogy & Judge Pitch">
-            <Icon n="help_outline" /> JUDGE PITCH
-          </button>
           <div className="demo-select-wrap">
             <label htmlFor="demo-sc-select" className="sr-only">Choose Demo Scenario</label>
             <select
